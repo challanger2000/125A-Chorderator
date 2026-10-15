@@ -1,4 +1,5 @@
 #include "../src/ChordEngine.h"
+#include "../src/ChordVoicing.h"
 #include <cstdlib>
 #include <initializer_list>
 #include <iostream>
@@ -44,5 +45,25 @@ int main() {
     int flushed=0; ledger.flush([&](int32_t,Chord chord){check(chord.accepted, "regression");++flushed;});
     check(flushed==1 && ledger.activeCount()==0, "regression");
     check(!ledger.release(2,60).accepted, "regression");
+    // Voicing stays in MIDI range and stays reproducible for the same context.
+    Settings vs;
+    const Chord base=generate(60,vs);
+    VoicingSettings vo;
+    const Chord first=voice(base,60,vo);
+    const Chord repeat=voice(base,60,vo);
+    check(first.accepted && first.count==3, "voicing accepted");
+    check(first.notes==repeat.notes, "deterministic voicing");
+    const Chord next=voice(generate(64,vs),64,vo,&first);
+    check(next.accepted, "voice leading accepted");
+    check(next.notes[0]<next.notes[1] && next.notes[1]<next.notes[2], "sorted pitches");
+    vo.character=Character::Power;
+    pitches(voice(base,60,vo),{60,67,72});
+    vo.character=Character::Classic; vo.leading=Leading::Off;
+    pitches(voice(base,60,vo),{60,64,67});
+    const Chord doubled=doubleRootAbove(voice(base,60,vo),60);
+    pitches(doubled,{60,64,67,72});
+    vo.leading=Leading::Auto; vo.character=Character::Wide;
+    const Chord wide=voice(base,60,vo);
+    check(wide.accepted && wide.notes[2]>wide.notes[0], "wide candidate");
     std::cout << "ChordEngine tests PASS\n";
 }
