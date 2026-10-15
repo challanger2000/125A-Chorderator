@@ -5,7 +5,7 @@
 namespace chorderator {
 
 // Pure, allocation-free music engine. No VST3 SDK dependency.
-enum class Scale : uint8_t { Major, NaturalMinor, HarmonicMinor, MelodicMinorAscending };
+enum class Scale : uint8_t { Major, NaturalMinor, HarmonicMinor, MelodicMinorAscending, Dorian, Phrygian, Lydian, Mixolydian, Locrian };
 enum class Quality : uint8_t { Major, Minor, Diminished, Augmented, Sus2, Sus4 };
 enum class Variant : uint8_t { Normal, Sus2, Sus4 };
 struct Settings {
@@ -28,6 +28,11 @@ constexpr std::array<int,7> intervals(Scale scale) noexcept {
         case Scale::NaturalMinor: return {0,2,3,5,7,8,10};
         case Scale::HarmonicMinor: return {0,2,3,5,7,8,11};
         case Scale::MelodicMinorAscending: return {0,2,3,5,7,9,11};
+        case Scale::Dorian: return {0,2,3,5,7,9,10};
+        case Scale::Phrygian: return {0,1,3,5,7,8,10};
+        case Scale::Lydian: return {0,2,4,6,7,9,11};
+        case Scale::Mixolydian: return {0,2,4,5,7,9,10};
+        case Scale::Locrian: return {0,1,3,5,6,8,10};
     }
     return {0,2,4,5,7,9,11};
 }
