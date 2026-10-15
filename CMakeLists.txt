@@ -26,7 +26,7 @@ if(CHORDERATOR_BUILD_VST3)
   FetchContent_MakeAvailable(vst3sdk)
   smtg_add_vst3plugin(Chorderator src/ChordVst3.cpp)
   target_link_libraries(Chorderator PRIVATE sdk vstgui_support)
-  smtg_target_add_plugin_resources(Chorderator RESOURCES resources/chorderator.uidesc)
+  smtg_target_add_plugin_resources(Chorderator RESOURCES resources/chorderator.uidesc resources/125A_Logo.png)
   target_compile_features(Chorderator PRIVATE cxx_std_17)
   if(WIN32)
     target_sources(Chorderator PRIVATE
