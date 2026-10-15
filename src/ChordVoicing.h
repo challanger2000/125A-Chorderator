@@ -42,8 +42,10 @@ inline Chord voice(Chord in, int rootMidi, VoicingSettings settings, const Chord
         if (c[1]<0 || c[1]>127 || c[2]<0 || c[2]>127) continue;
         std::sort(c.begin(),c.end());
         if (!(c[0]<c[1] && c[1]<c[2])) continue;
-        if (c[0]<rootMidi-12 || c[2]>rootMidi+24) continue;
-        if (settings.leading==Leading::Off && c[0]!=rootMidi) continue;
+        // An instrument triggered by a bass/root note must retain that note as
+        // the LOWEST voice. Earlier AUTO allowed upper chord tones to fall
+        // below it, causing abrupt bass/register switches after repetitions.
+        if (c[0]!=rootMidi || c[2]>rootMidi+19) continue;
         const int spread=c[2]-c[0];
         const int reference= settings.character==Character::Wide?19:
                              settings.character==Character::Dark?7:12;
