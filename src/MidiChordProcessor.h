@@ -33,9 +33,29 @@ class MidiChordProcessor {
     VoicingSettings voicing_{};
     ControlLayout controls_{};
     Chord previous_{};
+    // Deterministic note-addressed voice memory. Never detects 'phrases'
+    // from arbitrary interval thresholds. Once a root+modifier is voiced,
+    // later occurrences reuse all upper pitches until musical settings
+    // change or the processor is explicitly reset.
+    std::array<std::array<Chord,128>,3> voicingMemory_{};
+    void clearVoicingMemory() noexcept {
+        for(auto& variant:voicingMemory_)
+            for(auto& chord:variant) chord=Chord{};
+        previous_=Chord{};
+    }
 public:
-    void setSettings(Settings value) noexcept { settings_=value; }
-    void setVoicing(VoicingSettings value) noexcept { voicing_=value; }
+    void setSettings(Settings value) noexcept {
+        if(settings_.tonic!=value.tonic || settings_.scale!=value.scale ||
+           settings_.chromatic!=value.chromatic ||
+           settings_.rootOctaveDouble!=value.rootOctaveDouble)
+            clearVoicingMemory();
+        settings_=value;
+    }
+    void setVoicing(VoicingSettings value) noexcept {
+        if(voicing_.character!=value.character || voicing_.leading!=value.leading)
+            clearVoicingMemory();
+        voicing_=value;
+    }
     bool setControlLayout(ControlLayout value) noexcept {
         if (!value.valid()) return false;
         controls_=value; return true;
@@ -107,21 +127,32 @@ public:
                 chosen.rootOctaveDouble=false;
                 auto chord=generate(e.pitch,chosen);
                 if(!chord.accepted) continue;
-                // A descending octave leap marks a new register/phrase.
-                // Otherwise AUTO would carry upper voices from the previous
-                // ascent into the repeated low passage indefinitely.
-                const bool phraseRestart=previous_.accepted &&
-                    static_cast<int>(previous_.notes[0])-static_cast<int>(e.pitch)>=12;
-                chord=voice(chord,e.pitch,voicing_,
-                            previous_.accepted && !phraseRestart ? &previous_ : nullptr);
-                if(octave) chord=doubleRootAbove(chord,e.pitch);
-                if(!chord.accepted) continue;
+                const size_t variantIndex=
+                    static_cast<size_t>(chosen.variant);
+                const size_t pitchIndex=static_cast<size_t>(e.pitch);
+                // Defensive fallback for invalid enum state, although
+                // all normal modifier paths use the three valid values.
+                Chord* memory=variantIndex<voicingMemory_.size()
+                    ? &voicingMemory_[variantIndex][pitchIndex] : nullptr;
+                if(voicing_.leading==Leading::Auto &&
+                   memory && memory->accepted) {
+                    chord=*memory;
+                } else {
+                    chord=voice(chord,e.pitch,voicing_,
+                                previous_.accepted?&previous_:nullptr);
+                    if(octave)chord=doubleRootAbove(chord,e.pitch);
+                    if(!chord.accepted)continue;
+                    if(voicing_.leading==Leading::Auto && memory)
+                        *memory=chord;
+                }
+                if(!chord.accepted)continue;
                 *freeSlot={true,e.noteId,e.pitch,chord};
                 previous_=chord;
                 for(size_t k=0;k<chord.count;++k) {
                     const auto pitch=chord.notes[k];
                     if(sounding_[pitch]++==0)
-                        output_[outputCount_++]={offset,pitch,true,100};
+                        output_[outputCount_++]={offset,pitch,true,
+                             static_cast<uint8_t>(e.velocity?e.velocity:1)};
                 }
             }
             i=end;
@@ -138,7 +169,7 @@ public:
             if(sounding_[i]) output_[outputCount_++]={offset,static_cast<uint8_t>(i),false,0};
         sounding_.fill(0);
         for(auto& h:held_) h=Held{};
-        previous_=Chord{};
+        clearVoicingMemory();
         return true;
     }
 };

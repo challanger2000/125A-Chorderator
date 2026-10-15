@@ -124,15 +124,78 @@ int main() {
     if(wideOffDistinct==0)
         mismatch("WIDE+OFF never changes chord notes relative to CLASSIC",errors);
     MidiChordProcessor<> trigger;
-    const std::array<InputEvent,1> a{{{0,60,true,false,1}}};
+    const std::array<InputEvent,1> a{{{0,60,true,false,1,37}}};
     if(!trigger.process(a,1) || trigger.outputCount()!=3)
         mismatch("single note did not produce three MIDI NoteOns",errors);
-    else std::cout<<"INPUT-TO-OUTPUT VELOCITY: no input velocity field; output="
-                  <<static_cast<int>(trigger.output()[0].velocity)<<"\n";
+    else {
+        for(size_t i=0;i<trigger.outputCount();++i)
+            if(trigger.output()[i].velocity!=37)
+                mismatch("chord must preserve input velocity of 37",errors);
+        std::cout<<"INPUT-TO-OUTPUT VELOCITY: input=37 output="
+                 <<static_cast<int>(trigger.output()[0].velocity)<<"\\n";
+    }
     const std::array<InputEvent,1> b{{{0,60,true,false,2}}};
     if(!trigger.process(b,1))mismatch("overlap rejected",errors);
     else std::cout<<"OVERLAPPED IDENTICAL TRIGGER: second NoteOn events="
                   <<trigger.outputCount()<<" (zero means no re-articulation)\n";
+    // Same root and chord positions; each new attack keeps its new velocity.
+    MidiChordProcessor<> expressive;
+    std::array<uint8_t,3> original{};
+    for(int dynamic:{19,109,127}) {
+        const std::array<InputEvent,1> on{{{
+             0,60,true,false,77,static_cast<uint8_t>(dynamic)}}};
+        if(!expressive.process(on,1) || expressive.outputCount()!=3)
+            mismatch("velocity fixture should emit three NoteOns",errors);
+        else for(size_t i=0;i<3;++i) {
+            const auto& event=expressive.output()[i];
+            if(event.velocity!=dynamic)
+                mismatch("generated velocity differs from played velocity",errors);
+            if(dynamic==19)original[i]=event.pitch;
+            else if(event.pitch!=original[i])
+                mismatch("new velocity must not change cached chord notes",errors);
+        }
+        const std::array<InputEvent,1> off{{{0,60,false,true,77}}};
+        if(!expressive.process(off,1) || expressive.activeVoices()!=0)
+            mismatch("dynamic note failed to release",errors);
+    }
+    // Explicit chord inversions with independent reference pitches.
+    const auto majorChord=generate(60,Settings{});
+    const std::array<Chord,4> profiles{{
+        voice(majorChord,60,{Character::Classic,Leading::Off}),
+        voice(majorChord,60,{Character::Dark,Leading::Off}),
+        voice(majorChord,60,{Character::Wide,Leading::Off}),
+        voice(majorChord,60,{Character::Power,Leading::Off})}};
+    constexpr std::array<std::array<int,3>,4> expectedProfiles{{
+        {{60,64,67}},{{60,67,76}},{{60,76,79}},{{60,67,72}}}};
+    for(size_t i=0;i<profiles.size();++i)
+        for(size_t j=0;j<3;++j)
+            if(profiles[i].notes[j]!=expectedProfiles[i][j])
+                mismatch("CHARACTER independent C-major golden voicing failed",errors);
+    Settings locrian;locrian.scale=Scale::Locrian;locrian.variant=Variant::Sus2;
+    const auto altered=generate(60,locrian);
+    if(!altered.accepted || altered.notes[0]!=60 || altered.notes[1]!=62 ||
+       altered.notes[2]!=66 || altered.quality!=Quality::Sus2Flat5)
+        mismatch("Locrian C-D-Gb must be identified as Csus2(b5)",errors);
+    locrian.variant=Variant::Sus4;
+    if(generate(60,locrian).quality!=Quality::Sus4Flat5)
+        mismatch("Locrian suspended-fourth altered fifth is incorrectly named",errors);
+    locrian.scale=Scale::HarmonicMinor;locrian.variant=Variant::Sus2;
+    if(generate(63,locrian).quality!=Quality::Sus2Sharp5)
+        mismatch("augmented-fifth sus2 lacks altered-fifth identity",errors);
+    // Changing tonic/scale must invalidate voicing memory.
+    MidiChordProcessor<> changeKey;
+    const std::array<InputEvent,1> cOn{{{0,60,true,false,70}}};
+    const std::array<InputEvent,1> cOff{{{0,60,false,true,70}}};
+    if(!changeKey.process(cOn,1) || changeKey.outputCount()!=3 ||
+       changeKey.output()[1].pitch!=64)
+        mismatch("initial major harmony",errors);
+    changeKey.process(cOff,1);
+    Settings cMinor;cMinor.scale=Scale::NaturalMinor;
+    changeKey.setSettings(cMinor);
+    if(!changeKey.process(cOn,1) || changeKey.outputCount()!=3 ||
+       changeKey.output()[1].pitch!=63)
+        mismatch("voicing cache did not invalidate after scale change",errors);
+    changeKey.process(cOff,1);
     // Phrase reproducibility must not depend on having a full octave
     // descent at the end. C2-Eb2-G2-Bb2 -> C2 falls only ten semitones.
     int loopDiscrepancies=0;

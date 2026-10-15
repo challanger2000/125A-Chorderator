@@ -30,7 +30,7 @@
 <view class="COptionMenu" control-tag="Key" origin="20, 79" size="220, 33" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
 <view class="CTextLabel" origin="270, 54" size="220, 20" title="SCALE" font="Normal" font-color="Muted" transparent="true"/>
 <view class="COptionMenu" control-tag="Scale" origin="270, 79" size="220, 33" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
-<view class="CTextLabel" origin="20, 130" size="480, 20" chorderator-id="allowedNotes" title="Allowed notes: C D E F G A B" font="Small" font-color="Muted" transparent="true"/>
+<view class="CTextLabel" origin="20, 130" size="480, 20" chorderator-id="allowedNotes" title="Allowed root notes: C D E F G A B" font="Small" font-color="Muted" transparent="true"/>
 </view>
 <view class="CViewContainer" origin="560, 110" size="536, 170" background-color="Panel" transparent="false">
 <view class="CTextLabel" origin="20, 14" size="500, 28" title="VOICING" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
@@ -43,7 +43,7 @@
 <view class="CTextLabel" origin="20, 12" size="470, 25" title="PERFORMANCE" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
 <view class="CTextLabel" origin="20, 53" size="285, 22" title="ROOT OCTAVE DOUBLE" font="Normal" font-color="Text" transparent="true"/>
 <view class="CTextButton" control-tag="Double" origin="330, 47" size="160, 30" title="OFF" text-color="Text" text-color-highlighted="Text" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false" frame-color="Line" frame-width="1"/>
-<view class="CTextLabel" origin="20, 99" size="285, 22" title="CHROMATIC" font="Normal" font-color="Text" transparent="true"/>
+<view class="CTextLabel" origin="20, 99" size="285, 22" title="CHROMATIC ROOTS" font="Normal" font-color="Text" transparent="true"/>
 <view class="CTextButton" control-tag="Chromatic" origin="330, 94" size="160, 30" title="OFF" text-color="Text" text-color-highlighted="Text" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false" frame-color="Line" frame-width="1"/>
 </view>
 <view class="CViewContainer" origin="560, 300" size="536, 145" background-color="Panel" transparent="false">

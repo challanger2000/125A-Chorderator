@@ -492,5 +492,65 @@ int main() {
     const auto powerWithDouble=doubleRootAbove(voice(generate(60,Settings{}),
                                                       60,powerRepeat),60);
     pitches(powerWithDouble,{60,67,72});
+    // Independent profiles: each CHARACTER must have an audible pitch
+    // identity even when VOICE LEADING is OFF.
+    const Chord cc=generate(60,Settings{});
+    pitches(voice(cc,60,{Character::Classic,Leading::Off}),{60,64,67});
+    pitches(voice(cc,60,{Character::Dark,Leading::Off}),{60,67,76});
+    pitches(voice(cc,60,{Character::Wide,Leading::Off}),{60,76,79});
+    pitches(voice(cc,60,{Character::Power,Leading::Off}),{60,67,72});
+
+    // Expressive note events must retain their incoming MIDI velocity,
+    // including when the same AUTO chord is retrieved from voicing memory.
+    MidiChordProcessor<> velocityTest;
+    VoicingSettings chooseDark;
+    chooseDark.character=Character::Dark;
+    velocityTest.setVoicing(chooseDark);
+    std::array<uint8_t,3> firstDarkPitches{};
+    for(int velocity : {1,19,37,109,127}) {
+        const std::array<InputEvent,1> vOn{{{0,60,true,false,100,
+                                           static_cast<uint8_t>(velocity)}}};
+        check(velocityTest.process(vOn,1) && velocityTest.outputCount()==3,
+              "velocity attack must emit a complete new chord");
+        for(size_t i=0;i<3;++i) {
+            const auto& m=velocityTest.output()[i];
+            check(m.on && m.velocity==velocity,
+                  "all chord tones retain original key velocity");
+            if(velocity==1)firstDarkPitches[i]=m.pitch;
+            else check(m.pitch==firstDarkPitches[i],
+                       "velocity must not affect stored chord voicing");
+        }
+        const std::array<InputEvent,1> vOff{{{0,60,false,true,100}}};
+        check(velocityTest.process(vOff,1) && velocityTest.activeVoices()==0,
+              "every velocity attack receives corresponding NoteOffs");
+    }
+
+    Settings suspended;
+    suspended.scale=Scale::Locrian;
+    suspended.variant=Variant::Sus2;
+    const auto susFlat=generate(60,suspended);
+    pitches(susFlat,{60,62,66});
+    check(susFlat.quality==Quality::Sus2Flat5,
+          "Csus2(b5) must report diminished fifth");
+    suspended.variant=Variant::Sus4;
+    check(generate(60,suspended).quality==Quality::Sus4Flat5,
+          "sus4(b5) correctly named");
+    suspended.scale=Scale::HarmonicMinor;
+    suspended.variant=Variant::Sus2;
+    check(generate(63,suspended).quality==Quality::Sus2Sharp5,
+          "sus2(#5) correctly named");
+
+    MidiChordProcessor<> changeMusicalKey;
+    std::array<InputEvent,1> changeOn{{{0,60,true,false,123}}};
+    std::array<InputEvent,1> changeOff{{{0,60,false,true,123}}};
+    check(changeMusicalKey.process(changeOn,1) &&
+          changeMusicalKey.output()[1].pitch==64,"initial major chord");
+    check(changeMusicalKey.process(changeOff,1),"stop initial chord");
+    Settings naturalMinorNew; naturalMinorNew.scale=Scale::NaturalMinor;
+    changeMusicalKey.setSettings(naturalMinorNew);
+    check(changeMusicalKey.process(changeOn,1) &&
+          changeMusicalKey.output()[1].pitch==63,
+          "changing scale clears all cached voicings");
+    check(changeMusicalKey.process(changeOff,1),"stop minor chord");
     std::cout << "ChordEngine tests PASS\n";
 }

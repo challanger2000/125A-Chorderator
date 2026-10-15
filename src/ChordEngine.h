@@ -6,7 +6,8 @@ namespace chorderator {
 
 // Pure, allocation-free music engine. No VST3 SDK dependency.
 enum class Scale : uint8_t { Major, NaturalMinor, HarmonicMinor, MelodicMinorAscending, Dorian, Phrygian, Lydian, Mixolydian, Locrian };
-enum class Quality : uint8_t { Major, Minor, Diminished, Augmented, Sus2, Sus4, Power };
+enum class Quality : uint8_t { Major, Minor, Diminished, Augmented, Sus2, Sus4, Power,
+    Sus2Flat5, Sus2Sharp5, Sus4Flat5, Sus4Sharp5 };
 enum class Variant : uint8_t { Normal, Sus2, Sus4 };
 struct Settings {
     uint8_t tonic = 0; // pitch class 0=C ... 11=B
@@ -62,8 +63,18 @@ constexpr Chord generate(int midiPitch, Settings settings) noexcept {
         fifth = scale[(degree+4)%7] + ((degree+4)>=7 ? 12:0) - base;
     }
     out.quality = classify(third,fifth);
-    if (settings.variant == Variant::Sus2) { third = 2; out.quality = Quality::Sus2; }
-    if (settings.variant == Variant::Sus4) { third = 5; out.quality = Quality::Sus4; }
+    // The variant replaces only the third. Altered fifths retain their
+    // actual pitch and are explicitly named (e.g. Csus2(b5)).
+    if (settings.variant == Variant::Sus2) {
+        third = 2;
+        out.quality = fifth==6?Quality::Sus2Flat5:
+                      fifth==8?Quality::Sus2Sharp5:Quality::Sus2;
+    }
+    if (settings.variant == Variant::Sus4) {
+        third = 5;
+        out.quality = fifth==6?Quality::Sus4Flat5:
+                      fifth==8?Quality::Sus4Sharp5:Quality::Sus4;
+    }
     // Invalid upper pitches fail atomically; no partial chords.
     if (midiPitch + fifth > 127 || midiPitch + third > 127) return Chord{};
     out.notes[0] = static_cast<uint8_t>(midiPitch);

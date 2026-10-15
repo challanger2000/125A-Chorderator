@@ -16,6 +16,7 @@ struct InputEvent {
     bool noteOn = false;
     bool noteOff = false;
     int32_t noteId = -1;
+    uint8_t velocity = 100; // MIDI 1..127, defaults for legacy fixed-input fixtures
 };
 struct Modifier {
     Variant variant = Variant::Normal;

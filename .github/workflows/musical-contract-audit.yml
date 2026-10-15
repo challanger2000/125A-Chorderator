@@ -4,6 +4,11 @@ on:
   push:
     branches: [develop/v1.0.0]
     paths:
+      - "src/ChordEngine.h"
+      - "src/ChordVoicing.h"
+      - "src/MidiControl.h"
+      - "src/MidiChordProcessor.h"
+      - "src/ChordVst3.cpp"
       - "tests/MusicalContractAudit.cpp"
       - ".github/workflows/musical-contract-audit.yml"
 jobs:

@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <cmath>
 
 namespace Steinberg::Vst {
 namespace {
@@ -101,10 +102,10 @@ class ChorderatorProcessor final : public AudioEffect {
         chorderator::Quality quality=chorderator::Quality::Major;
         if(!delivery_.recovering() && core_.singleChord(root,quality)) {
             publish(data,kLiveChordRoot,root,128);
-            publish(data,kLiveChordQuality,static_cast<int>(quality),7);
+            publish(data,kLiveChordQuality,static_cast<int>(quality),11);
         } else {
             publish(data,kLiveChordRoot,128,128);
-            publish(data,kLiveChordQuality,7,7);
+            publish(data,kLiveChordQuality,11,11);
         }
     }
     void apply() {
@@ -260,8 +261,16 @@ public:
                 if(count==kEvents) {
                     requestRecovery();publishNotes(data);return kResultOk;
                 }
+                // Preserve the original MIDI dynamic across every
+                // voice of the generated chord. MIDI velocity 0 is
+                // reserved for NoteOff; clamp musical NoteOns to 1..127.
+                const float incomingVelocity=on?e.noteOn.velocity:0.f;
+                const int velocity=on && std::isfinite(incomingVelocity)
+                    ? std::clamp(static_cast<int>(incomingVelocity*127.f+0.5f),1,127)
+                    : 100;
                 notes[count++]={static_cast<uint32_t>(e.sampleOffset),
-                                static_cast<int16_t>(pitch),on,off,id};
+                                static_cast<int16_t>(pitch),on,off,id,
+                                static_cast<uint8_t>(velocity)};
             }
         }
         const bool ok=chorderator::runTimeline(notes,count,params,pcount,
@@ -284,7 +293,8 @@ class ChorderatorController final : public EditControllerEx1,
     void refreshLiveNotes() {
         if(!liveNotes_)return;
         static constexpr const char* notes[]={"C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"};
-        static constexpr const char* qualities[]={"","m","dim","aug","sus2","sus4","5"};
+        static constexpr const char* qualities[]={"","m","dim","aug","sus2","sus4","5",
+            "sus2(b5)","sus2(#5)","sus4(b5)","sus4(#5)"};
         const int count=quantized(getParamNormalized(kLiveCount),129);
         if(count==0) {
             liveNotes_->setText("No active chord");
@@ -292,8 +302,8 @@ class ChorderatorController final : public EditControllerEx1,
             return;
         }
         const int root=quantized(getParamNormalized(kLiveChordRoot),129);
-        const int quality=quantized(getParamNormalized(kLiveChordQuality),8);
-        std::string line=root<128 && quality<7 ?
+        const int quality=quantized(getParamNormalized(kLiveChordQuality),12);
+        std::string line=root<128 && quality<11 ?
             std::string("CHORD: ")+notes[root%12]+qualities[quality] :
             "CHORD: -- (overlap / recovery)";
         line+="    |    Notes: ";
@@ -341,7 +351,7 @@ class ChorderatorController final : public EditControllerEx1,
         const int tonic=quantized(getParamNormalized(kKey),12);
         const auto scale=static_cast<chorderator::Scale>(quantized(getParamNormalized(kScale),9));
         const auto degrees=chorderator::intervals(scale);
-        std::string value="Allowed notes: ";
+        std::string value="Allowed root notes: ";
         for(size_t i=0;i<degrees.size();++i) {
             if(i) value+="  ";
             value+=names[(tonic+degrees[i])%12];
@@ -428,7 +438,7 @@ public:
         parameters.addParameter(controlBase);
         for(ParamID id=kLiveCount;id<=kLiveChordQuality;++id) {
             const int max=id==kLiveCount || id==kLiveChordRoot?128:
-                          id==kLiveChordQuality?7:127;
+                          id==kLiveChordQuality?11:127;
             auto* p=new RangeParameter(STR16("Live MIDI"),id,nullptr,0.,
                                        static_cast<double>(max),0.,max);
             p->getInfo().flags=ParameterInfo::kIsReadOnly | ParameterInfo::kIsHidden;
