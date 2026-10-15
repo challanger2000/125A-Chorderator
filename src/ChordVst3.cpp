@@ -13,6 +13,8 @@
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "pluginterfaces/base/ibstream.h"
+#include "pluginterfaces/base/ustring.h"
+#include "pluginterfaces/base/ftypes.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
