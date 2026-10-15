@@ -121,18 +121,18 @@ int main() {
     }
     // Control NoteOns on the same sample apply regardless of host event order.
     ControlLayout layout;
-    check(layout.valid() && layout.isControl(13) && !layout.isControl(60), "valid controls");
+    check(layout.valid() && layout.isControl(1) && !layout.isControl(60), "valid controls");
     const std::array<InputEvent,3> firstOrder{{{12,60,true,false,11},
-                                                {12,14,true,false,12},
-                                                {13,14,false,true,12}}};
-    const std::array<InputEvent,3> reverseOrder{{{12,14,true,false,12},
+                                                {12,2,true,false,12},
+                                                {13,2,false,true,12}}};
+    const std::array<InputEvent,3> reverseOrder{{{12,2,true,false,12},
                                                   {12,60,true,false,11},
-                                                  {13,14,false,true,12}}};
+                                                  {13,2,false,true,12}}};
     check(modifierAt(firstOrder,3,12,layout).variant==Variant::Sus4, "sus4 selected");
     check(modifierAt(reverseOrder,3,12,layout).variant==Variant::Sus4, "order independent");
     check(modifierAt(firstOrder,3,13,layout).variant==Variant::Normal, "no held mode");
-    const std::array<InputEvent,2> conflicting{{{4,13,true,false,1},
-                                                 {4,14,true,false,2}}};
+    const std::array<InputEvent,2> conflicting{{{4,1,true,false,1},
+                                                 {4,2,true,false,2}}};
     const auto rejected=modifierAt(conflicting,2,4,layout);
     check(rejected.conflict && rejected.variant==Variant::Normal, "conflicting modifiers safe");
     layout.basePitch=127;
@@ -144,9 +144,9 @@ int main() {
     exact.leading=Leading::Off;
     proc.setVoicing(exact);
     std::array<InputEvent,4> batch{{{0,60,true,false,101},
-                                    {0,14,true,false,201},
+                                    {0,2,true,false,201},
                                     {48,60,false,true,101},
-                                    {48,14,false,true,201}}};
+                                    {48,2,false,true,201}}};
     check(proc.process(batch,4), "processor accepted event block");
     check(proc.outputCount()==6, "three NoteOn and three NoteOff");
     check(proc.output()[0].on && proc.output()[0].pitch==60, "root NoteOn");
