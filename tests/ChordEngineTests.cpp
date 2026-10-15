@@ -143,6 +143,61 @@ int main() {
     // Repeating the same chord must not walk to a higher octave.
     const Chord gRepeat=voice(generate(55,majorScale),55,autoMode,&gAuto);
     check(gRepeat.notes==gAuto.notes,"AUTO repeated chord remains in stable register");
+    // Musical QA: full progressions in all keys, diatonic scales, playable
+    // registers and character modes. Check exact pitch classes, bass anchor,
+    // deterministic repeat and bounded register throughout long repetitions.
+    constexpr std::array<Scale,9> allScales{{
+        Scale::Major,Scale::NaturalMinor,Scale::HarmonicMinor,
+        Scale::MelodicMinorAscending,Scale::Dorian,Scale::Phrygian,
+        Scale::Lydian,Scale::Mixolydian,Scale::Locrian}};
+    int verifiedChords=0;
+    int autoDifferent=0;
+    for (auto scale : allScales) for(int tonic=0;tonic<12;++tonic)
+    for(int octave=3;octave<=6;++octave)
+    for(auto character : {Character::Classic,Character::Dark,
+                          Character::Wide,Character::Power}) {
+        Settings tonal; tonal.scale=scale; tonal.tonic=static_cast<uint8_t>(tonic);
+        VoicingSettings musical; musical.character=character; musical.leading=Leading::Auto;
+        VoicingSettings staticMode=musical; staticMode.leading=Leading::Off;
+        Chord prior{};
+        const auto degrees=intervals(scale);
+        for(int pass=0;pass<4;++pass) for(int step=0;step<8;++step) {
+            const int idx=step==7?0:step;
+            const int root=octave*12+tonic+degrees[idx];
+            if(root>103)continue;
+            const Chord generated=generate(root,tonal);
+            if(!generated.accepted)continue;
+            const Chord autoChord=voice(generated,root,musical,
+                                        prior.accepted?&prior:nullptr);
+            const Chord offChord=voice(generated,root,staticMode,
+                                       prior.accepted?&prior:nullptr);
+            check(autoChord.accepted && offChord.accepted,
+                  "QA: every legal triad must have valid voicing");
+            check(autoChord.count==3 && autoChord.notes[0]==root,
+                  "QA: input bass fixed");
+            check(autoChord.notes[0]<autoChord.notes[1] &&
+                  autoChord.notes[1]<autoChord.notes[2] &&
+                  autoChord.notes[2]<=127 &&
+                  autoChord.notes[2]-root<=23,
+                  "QA: ordered, bounded MIDI register");
+            for(int n=1;n<3;++n) {
+                bool matches=false;
+                for(int src=0;src<3;++src)
+                    if(mod12(static_cast<int>(autoChord.notes[n])-
+                             static_cast<int>(generated.notes[src]))==0)
+                        matches=true;
+                check(matches,"QA: upper voice must retain chord pitch class");
+            }
+            const Chord exactRepeat=voice(generated,root,musical,&autoChord);
+            check(exactRepeat.notes==autoChord.notes,
+                  "QA: identical held chord must not migrate");
+            if(autoChord.notes!=offChord.notes) ++autoDifferent;
+            prior=autoChord;
+            ++verifiedChords;
+        }
+    }
+    check(verifiedChords>10000,"QA: extensive harmonic coverage");
+    check(autoDifferent>0,"QA: AUTO must yield some real inversions");
     // Control NoteOns on the same sample apply regardless of host event order.
     ControlLayout layout;
     check(layout.valid() && layout.isControl(50) && !layout.isControl(60), "valid controls");
