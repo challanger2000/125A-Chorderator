@@ -24,7 +24,7 @@ jobs:
         shell: pwsh
         run: |
           npm install --no-save @resvg/resvg-js@2.6.2
-          node -e "const fs=require('fs'); const {Resvg}=require('@resvg/resvg-js'); const svg=fs.readFileSync('resources/125A_Logo_Master_FINAL.svg','utf8'); fs.writeFileSync('resources/125A_Logo.png',new Resvg(svg,{fitTo:{mode:'width',value:276}}).render().asPng());"
+          node -e "const fs=require('fs'); const {Resvg}=require('@resvg/resvg-js'); const svg=fs.readFileSync('resources/125A_Logo_Master_FINAL.svg','utf8'); fs.writeFileSync('resources/125A_Logo.png',new Resvg(svg,{fitTo:{mode:'width',value:138}}).render().asPng());"
           if (-not (Test-Path resources/125A_Logo.png)) { throw 'Logo PNG generation failed' }
       - name: Configure VST3 SDK
         run: cmake -S . -B build-vst3 -DCHORDERATOR_BUILD_VST3=ON
