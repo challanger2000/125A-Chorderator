@@ -31,3 +31,13 @@
 - Windows development artifact produced by run 38783476620.
 - Subsequent source correction pending: note-name display now follows Studio One MIDI 48 = C0, plus regression cases MIDI 24 = C-2, 60 = C1.
 - **Still NOT YET VERIFIED:** actual Studio One editor clicks/automation/transport and 125A Plugin Tester results for this repair build; neither core PASS nor validator PASS is a FULL-AUDIT or FINAL release pass.
+
+## Verified final CI evidence for this repair phase (2026-10-15)
+
+**Source commit:** `38a87dd4e4dccbcf4e1c3d549e9a33ce12d82146`.
+
+- Core regression run: https://github.com/challanger2000/125A-Chorderator/actions/runs/38784146250 — **PASS**.
+- Windows VST3 build and Steinberg validator: https://github.com/challanger2000/125A-Chorderator/actions/runs/38784146224 — **PASS, validator 47 passed / 0 failed**.
+- Windows development VST3 artifact is present in run 38784146224.
+- In addition to the three repair areas, displayed note octaves now honor the observed Studio One convention: MIDI 24 = C-2, 48 = C0, 60 = C1; the core suite asserts this mapping.
+- **NOT VERIFIED / release blocking:** actual DAW editor mouse/zoom/automation/restore and transport observations; 125A Plugin Tester v0.2.10 run on this exact development binary; real-host partial event rejection and dense automation fixtures. No FULL QA / FINAL designation is authorized by this report.
