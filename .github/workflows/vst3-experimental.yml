@@ -40,17 +40,23 @@ jobs:
           New-Item -ItemType Directory -Force -Path artifact | Out-Null
           Copy-Item -Path $bundle.FullName -Destination artifact -Recurse -Force
           $staged = Join-Path (Resolve-Path artifact).Path 'Chorderator.vst3'
+          $final = Join-Path (Resolve-Path artifact).Path '125A CHORDERATOR.vst3'
+          Rename-Item -LiteralPath $staged -NewName '125A CHORDERATOR.vst3'
+          $staged = $final
+          $internal = Join-Path $staged 'Contents/x86_64-win/Chorderator.vst3'
+          if (-not (Test-Path -PathType Leaf $internal)) { throw 'Internal VST3 module not found' }
+          Rename-Item -LiteralPath $internal -NewName '125A CHORDERATOR.vst3'
           if (-not (Test-Path -PathType Container $staged)) { throw 'Staged VST3 bundle missing' }
       - name: Steinberg VST3 validation
         shell: pwsh
         run: |
           $exe = Get-ChildItem build-vst3 -Recurse -File -Filter validator.exe | Select-Object -First 1
           if (-not $exe) { throw 'Steinberg validator.exe missing' }
-          & $exe.FullName "$env:GITHUB_WORKSPACE/artifact/Chorderator.vst3"
+          & $exe.FullName "$env:GITHUB_WORKSPACE/artifact/125A CHORDERATOR.vst3"
           if ($LASTEXITCODE -ne 0) { throw "Steinberg validator failed: $LASTEXITCODE" }
       - name: Upload development VST3
         uses: actions/upload-artifact@v4
         with:
-          name: Chorderator-v1.0.0-Windows-x64-DEVELOPMENT
+          name: 125A-CHORDERATOR-v1.0.0-Windows-x64-DEVELOPMENT
           path: artifact/
           if-no-files-found: error
