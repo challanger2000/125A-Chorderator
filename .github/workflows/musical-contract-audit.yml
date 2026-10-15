@@ -1,0 +1,20 @@
+name: Chorderator independent musical contract audit
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop/v1.0.0]
+    paths:
+      - "tests/MusicalContractAudit.cpp"
+      - ".github/workflows/musical-contract-audit.yml"
+jobs:
+  musical:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Compile standalone musical contract audit
+        shell: cmd
+        run: cl /nologo /EHsc /std:c++17 /W4 /WX tests\MusicalContractAudit.cpp /Fe:musical-audit.exe
+      - name: Execute musical contract audit
+        shell: cmd
+        run: musical-audit.exe
