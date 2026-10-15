@@ -4,6 +4,8 @@
 #include "public.sdk/source/main/pluginfactory.h"
 #include "vstgui/plugin-bindings/vst3editor.h"
 #include "vstgui/lib/controls/ctextlabel.h"
+#include "vstgui/lib/controls/cbuttons.h"
+#include "vstgui/lib/controls/ccontrol.h"
 #include "vstgui/uidescription/uiattributes.h"
 #include <string>
 #include <cstring>
@@ -207,8 +209,22 @@ public:
 };
 
 class ChorderatorController final : public EditControllerEx1,
-    public VSTGUI::VST3EditorDelegate {
+    public VSTGUI::VST3EditorDelegate, public VSTGUI::IControlListener {
     VSTGUI::CTextLabel* allowedNotes_=nullptr;
+    VSTGUI::CTextButton* zoomButton_=nullptr;
+    VSTGUI::VST3Editor* activeEditor_=nullptr;
+    double zoom_=1.0;
+    void updateZoomText() {
+        if(!zoomButton_) return;
+        zoomButton_->setTitle(zoom_ >= 1.25 ? "ZOOM 150 %" : "ZOOM 100 %");
+        zoomButton_->invalid();
+    }
+    void valueChanged(VSTGUI::CControl* control) SMTG_OVERRIDE {
+        if(control!=zoomButton_ || !activeEditor_) return;
+        zoom_=zoom_ >= 1.25 ? 1.0 : 1.5;
+        activeEditor_->setZoomFactor(zoom_);
+        updateZoomText();
+    }
     void refreshScaleNotes() {
         if(!allowedNotes_) return;
         static constexpr const char* names[]={"C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"};
@@ -226,13 +242,23 @@ class ChorderatorController final : public EditControllerEx1,
 public:
     VSTGUI::CView* verifyView(VSTGUI::CView* view,
         const VSTGUI::UIAttributes& attributes,
-        const VSTGUI::IUIDescription*, VSTGUI::VST3Editor*) SMTG_OVERRIDE {
+        const VSTGUI::IUIDescription*, VSTGUI::VST3Editor* editor) SMTG_OVERRIDE {
+        activeEditor_=editor;
         const auto* id=attributes.getAttributeValue("chorderator-id");
         if(id && *id=="allowedNotes") allowedNotes_=dynamic_cast<VSTGUI::CTextLabel*>(view);
+        if(auto* control=dynamic_cast<VSTGUI::CControl*>(view)) {
+            if(control->getTag()==900) {
+                zoomButton_=dynamic_cast<VSTGUI::CTextButton*>(control);
+                control->setListener(this);
+                updateZoomText();
+            }
+        }
         refreshScaleNotes();
         return view;
     }
-    void willClose(VSTGUI::VST3Editor*) SMTG_OVERRIDE { allowedNotes_=nullptr; }
+    void willClose(VSTGUI::VST3Editor*) SMTG_OVERRIDE {
+        allowedNotes_=nullptr;zoomButton_=nullptr;activeEditor_=nullptr;
+    }
     tresult PLUGIN_API setParamNormalized(ParamID id,ParamValue value) SMTG_OVERRIDE {
         const auto result=EditControllerEx1::setParamNormalized(id,value);
         if(id==kKey || id==kScale) refreshScaleNotes();
@@ -278,7 +304,7 @@ public:
             auto* editor=new VSTGUI::VST3Editor(this,"ChorderatorView","chorderator.uidesc");
             editor->setDelegate(this);
             editor->setAllowedZoomFactors({1.0,1.5});
-            editor->setZoomFactor(1.0);
+            editor->setZoomFactor(zoom_);
             return editor;
         }
         return nullptr;
