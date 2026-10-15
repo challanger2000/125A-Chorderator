@@ -100,3 +100,14 @@ The previous design called its raised upper voices "inversions" while forcing th
 - Native Studio One routed MIDI, 125A Plugin Tester v0.2.10 and subjective musical review remain **NOT VERIFIED**; no FINAL release authorization.
 
 **Persistent design constraint:** Input MIDI root is a harmonic label only in AUTO, not a guarantee about the lowest emitted MIDI note. Regression tests must explicitly assert different bass pitch classes, not merely different octave placements of upper voices.
+
+## True inversion repair — Windows VST3 evidence
+
+- Exact implementation code: `293953ab6f455529408b3e43307c82dd2b4f37f8`.
+- [Musical contract audit: PASS](https://github.com/challanger2000/125A-Chorderator/actions/runs/38815267816).
+- [Core regression: PASS](https://github.com/challanger2000/125A-Chorderator/actions/runs/38815267764).
+- [Windows VST3 build + Steinberg Validator: **47/47 PASS**](https://github.com/challanger2000/125A-Chorderator/actions/runs/38815267750), verified workflow head SHA matches implementation code.
+- Produced development artifact ID `12010467693`: `125A-CHORDERATOR-v1.0.0-Windows-x64-DEVELOPMENT`.
+- ZIP archive CRC verified and contents checked: full `125A CHORDERATOR.vst3` folder with Windows x64 binary, GUI resources, module information and icon.
+- The formal musical design contract is `docs/MUSICAL-IMPLEMENTATION-CONTRACT.md`. AUTO can put harmonic third/fifth in the bass; OFF keeps deterministic CHARACTER reference voicings.
+- **Release still blocked:** real Studio One input/output, routing, GUI automation, project recall and 125A Plugin Tester for this exact binary are not verified. A working VST3 bundle plus independent MIDI/Steinberg tests are necessary but not sufficient.
