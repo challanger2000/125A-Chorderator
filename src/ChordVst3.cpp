@@ -22,7 +22,8 @@ namespace {
 static const FUID kProcessorId(0x125A4301, 0x43484F52, 0x44455241, 0x544F5201);
 static const FUID kControllerId(0x125A4302, 0x43484F52, 0x44455241, 0x544F5201);
 enum Params : ParamID { kKey=100, kScale=101, kChromatic=102, kVoiceLeading=103,
-    kCharacter=104, kRootDouble=105, kControlBase=106 };
+    kCharacter=104, kRootDouble=105, kControlBase=106,
+    kLiveCount=200, kLivePitch1=201, kLivePitch2=202, kLivePitch3=203, kLivePitch4=204 };
 constexpr uint32_t kMagic=0x31444843u; // CHD1
 constexpr uint32_t kVersion=1;
 struct StoredState {
@@ -72,6 +73,23 @@ class ChorderatorProcessor final : public AudioEffect {
     chorderator::MidiChordProcessor<64,1024> core_;
     StoredState settings_{};
     bool transportWasPlaying_=false;
+    std::array<bool,128> visiblePitches_{};
+    static void publish(ProcessData& data,ParamID id,int value,int max) {
+        if(!data.outputParameterChanges) return;
+        int32 index=0;
+        auto* q=data.outputParameterChanges->addParameterData(id,index);
+        if(!q) return;
+        q->addPoint(0,static_cast<ParamValue>(value)/max,index);
+    }
+    void publishNotes(ProcessData& data) {
+        int count=0; std::array<int,4> pitches{};
+        for(int n=0;n<128;++n) if(visiblePitches_[static_cast<size_t>(n)]) {
+            if(count<4) pitches[static_cast<size_t>(count)]=n;
+            ++count;
+        }
+        publish(data,kLiveCount,std::min(count,128),128);
+        for(size_t i=0;i<4;++i) publish(data,kLivePitch1+static_cast<ParamID>(i),pitches[i],127);
+    }
     void apply() {
         chorderator::Settings chord;
         chord.tonic=static_cast<uint8_t>(settings_.key);
@@ -123,6 +141,7 @@ class ChorderatorProcessor final : public AudioEffect {
                 e.noteOff.noteId=-1;
             }
             if(dest->addEvent(e)!=kResultOk) return false;
+            visiblePitches_[m.pitch]=m.on;
         }
         return true;
     }
@@ -140,7 +159,7 @@ public:
         return format==kSample32 || format==kSample64?kResultTrue:kResultFalse;
     }
     tresult PLUGIN_API setActive(TBool active) SMTG_OVERRIDE {
-        if(!active) { core_.stop(); transportWasPlaying_=false; }
+        if(!active) { core_.stop(); visiblePitches_.fill(false); transportWasPlaying_=false; }
         return AudioEffect::setActive(active);
     }
     tresult PLUGIN_API getState(IBStream* stream) SMTG_OVERRIDE {
@@ -150,6 +169,7 @@ public:
         StoredState loaded{};
         if(!readState(stream,loaded)) return kResultFalse;
         core_.stop();
+        visiblePitches_.fill(false);
         settings_=loaded;apply();
         return kResultOk;
     }
@@ -204,13 +224,29 @@ public:
             incoming[j]=item;
         }
         if(!core_.process(incoming,count)) return kResultFalse;
-        return emit(data.outputEvents,-1)?kResultOk:kResultFalse;
+        if(!emit(data.outputEvents,-1)) return kResultFalse;
+        publishNotes(data);
+        return kResultOk;
     }
 };
 
 class ChorderatorController final : public EditControllerEx1,
     public VSTGUI::VST3EditorDelegate, public VSTGUI::IControlListener {
     VSTGUI::CTextLabel* allowedNotes_=nullptr;
+    VSTGUI::CTextLabel* liveNotes_=nullptr;
+    void refreshLiveNotes() {
+        if(!liveNotes_) return;
+        static constexpr const char* names[]={"C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"};
+        const int count=quantized(getParamNormalized(kLiveCount),129);
+        std::string label=count==0?"No active chord notes":"Active MIDI notes: ";
+        for(int i=0;i<std::min(count,4);++i) {
+            if(i) label+="  ";
+            const auto n=quantized(getParamNormalized(kLivePitch1+static_cast<ParamID>(i)),128);
+            label+=names[n%12]; label+=std::to_string(n/12); label+=" ("+std::to_string(n)+")";
+        }
+        if(count>4) label+="  +"+std::to_string(count-4)+" more";
+        liveNotes_->setText(label.c_str());liveNotes_->invalid();
+    }
     VSTGUI::CTextButton* zoomButton_=nullptr;
     VSTGUI::VST3Editor* activeEditor_=nullptr;
     double zoom_=1.0;
@@ -246,6 +282,7 @@ public:
         activeEditor_=editor;
         const auto* id=attributes.getAttributeValue("chorderator-id");
         if(id && *id=="allowedNotes") allowedNotes_=dynamic_cast<VSTGUI::CTextLabel*>(view);
+        if(id && *id=="liveNotes") liveNotes_=dynamic_cast<VSTGUI::CTextLabel*>(view);
         if(auto* control=dynamic_cast<VSTGUI::CControl*>(view)) {
             if(control->getTag()==900) {
                 zoomButton_=dynamic_cast<VSTGUI::CTextButton*>(control);
@@ -253,15 +290,16 @@ public:
                 updateZoomText();
             }
         }
-        refreshScaleNotes();
+        refreshScaleNotes();refreshLiveNotes();
         return view;
     }
     void willClose(VSTGUI::VST3Editor*) SMTG_OVERRIDE {
-        allowedNotes_=nullptr;zoomButton_=nullptr;activeEditor_=nullptr;
+        allowedNotes_=nullptr;liveNotes_=nullptr;zoomButton_=nullptr;activeEditor_=nullptr;
     }
     tresult PLUGIN_API setParamNormalized(ParamID id,ParamValue value) SMTG_OVERRIDE {
         const auto result=EditControllerEx1::setParamNormalized(id,value);
         if(id==kKey || id==kScale) refreshScaleNotes();
+        if(id>=kLiveCount && id<=kLivePitch4) refreshLiveNotes();
         return result;
     }
 
@@ -297,6 +335,13 @@ public:
         parameters.addParameter(doubled);
         parameters.addParameter(STR16("Control Base"),nullptr,125,12.0/125.0,
                                 ParameterInfo::kCanAutomate,kControlBase);
+        for(ParamID id=kLiveCount;id<=kLivePitch4;++id) {
+            auto* p=new RangeParameter(STR16("Live MIDI"),id,nullptr,0.,
+                                       id==kLiveCount?128.:127.,0.,
+                                       id==kLiveCount?128:127);
+            p->getInfo().flags=ParameterInfo::kIsReadOnly | ParameterInfo::kIsHidden;
+            parameters.addParameter(p);
+        }
         return kResultOk;
     }
     IPlugView* PLUGIN_API createView(FIDString name) SMTG_OVERRIDE {
