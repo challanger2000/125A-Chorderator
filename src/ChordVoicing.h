@@ -77,16 +77,17 @@ inline Chord voice(Chord in, int rootMidi, VoicingSettings settings, const Chord
     for(int i=0;i<3;++i) in.notes[i]=static_cast<uint8_t>(best[i]);
     return in;
 }
+// Add the played root exactly one octave higher, regardless of AUTO voicing.
+// If POWER already contains root+12, that note is not duplicated.
 inline Chord doubleRootAbove(Chord chord, int rootMidi) noexcept {
-    if (!chord.accepted || chord.count!=3) return {};
-    const int pitchClass=mod12(rootMidi);
-    int highest=0;
-    for(int i=0;i<3;++i) if(chord.notes[i]>highest) highest=chord.notes[i];
-    int octaveRoot=highest+1;
-    while(octaveRoot<=127 && mod12(octaveRoot)!=pitchClass) ++octaveRoot;
-    if (octaveRoot>127) return {}; // atomic rejection, never send partial MIDI.
-    chord.notes[3]=static_cast<uint8_t>(octaveRoot);
+    if (!chord.accepted || chord.count!=3 || rootMidi<0 || rootMidi+12>127)
+        return {};
+    const uint8_t octaveRoot=static_cast<uint8_t>(rootMidi+12);
+    for(int i=0;i<3;++i)
+        if(chord.notes[i]==octaveRoot) return chord;
+    chord.notes[3]=octaveRoot;
     chord.count=4;
     return chord;
 }
+
 } // namespace chorderator

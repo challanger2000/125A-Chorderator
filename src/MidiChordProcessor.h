@@ -107,8 +107,13 @@ public:
                 chosen.rootOctaveDouble=false;
                 auto chord=generate(e.pitch,chosen);
                 if(!chord.accepted) continue;
+                // A descending octave leap marks a new register/phrase.
+                // Otherwise AUTO would carry upper voices from the previous
+                // ascent into the repeated low passage indefinitely.
+                const bool phraseRestart=previous_.accepted &&
+                    static_cast<int>(previous_.notes[0])-static_cast<int>(e.pitch)>=12;
                 chord=voice(chord,e.pitch,voicing_,
-                            previous_.accepted ? &previous_ : nullptr);
+                            previous_.accepted && !phraseRestart ? &previous_ : nullptr);
                 if(octave) chord=doubleRootAbove(chord,e.pitch);
                 if(!chord.accepted) continue;
                 *freeSlot={true,e.noteId,e.pitch,chord};

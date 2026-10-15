@@ -55,3 +55,18 @@ Code commit: `226b95378494e14d089cb466dabbf123e71b2e0a`.
 - Core suite: **PASS**, including C2 no-longer-reserved and D0+chord no-overlap regressions; https://github.com/challanger2000/125A-Chorderator/actions/runs/38787579732
 - Windows VST3 build and official Steinberg Validator: **PASS, 47 passed / 0 failed**; development ZIP available in https://github.com/challanger2000/125A-Chorderator/actions/runs/38787579299
 - Host-local demonstration of these exact notes in Studio One is still pending. This is not a FULL QA / release authorization.
+
+## 2026-10-15 — Studio One repeated ascending-scale screenshot / VOICE LEADING AUTO (pending CI)
+
+**Observed:** In C Natural Minor, DARK, VOICE LEADING AUTO, ROOT OCTAVE DOUBLE ON, a repeated C2-D2-Eb2-F2-G2-Ab2-Bb2-C3 MIDI phrase retains the C2 bass on repeat while moving the upper chord notes higher. The first screenshot is insufficient for an acoustic judgement; the second captured MIDI output visibly demonstrates different upper registers after the repeated low C2.
+
+**Two source causes:**
+1. `MidiChordProcessor` retained its last AUTO voicing after an octave descent C3 -> C2. Root locking alone did not guarantee complete repeatability.
+2. `doubleRootAbove` appended a pitch-class match *above the highest upper voice*, potentially selecting root+24 instead of root+12. Despite the UI label ROOT OCTAVE DOUBLE, the octave was not fixed relative to the played root.
+
+**Targeted changes (not yet accepted):**
+- Treat downward leaps of at least 12 semitones in the played trigger as a new phrase for AUTO's voicing reference while maintaining the exact trigger root.
+- Ensure ROOT OCTAVE DOUBLE outputs pitch `rootMidi+12` rather than a register that depends on the highest upper voice. When root+12 is already part of a POWER chord, reuse that existing pitch rather than duplicating it.
+- Deterministic core regression: 6 repeats of the 8-note rising Natural Minor progression with 3 CHARACTER modes x ROOT OCTAVE DOUBLE OFF/ON. Every full four-/three-note chord must be identical at the same passage position across repeats. Independent regression verifies a root+12 octave that lies below the upper voices.
+
+**Status:** implementation/test committed only after review; CI PASS, validator and native Studio One review not yet evidenced.

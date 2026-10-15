@@ -435,5 +435,62 @@ int main() {
           studioOneOctaveFor(48)==2 &&
           studioOneOctaveFor(60)==3,
           "DAW octave notation: MIDI 24=C0, MIDI 48=C2, MIDI 60=C3");
+    // Studio One screenshot regression: two or more repetitions of
+    // C2-D2-Eb2-F2-G2-Ab2-Bb2-C3 in C Natural Minor.
+    // Root and *all upper voices* must return to the same notes at bar 9,
+    // not just preserve the bass while the upper voices climb each cycle.
+    for(auto character : {Character::Classic,Character::Dark,Character::Wide})
+    for(bool octaveDoubled : {false,true}) {
+        MidiChordProcessor<> repeatedScale;
+        Settings sequenceSettings;
+        sequenceSettings.scale=Scale::NaturalMinor;
+        sequenceSettings.tonic=0;
+        sequenceSettings.rootOctaveDouble=octaveDoubled;
+        repeatedScale.setSettings(sequenceSettings);
+        VoicingSettings sequenceVoicing;
+        sequenceVoicing.leading=Leading::Auto;
+        sequenceVoicing.character=character;
+        repeatedScale.setVoicing(sequenceVoicing);
+        const std::array<int,8> playedRoots{{48,50,51,53,55,56,58,60}};
+        std::array<std::array<uint8_t,4>,8> firstPass{};
+        for(int pass=0;pass<6;++pass) for(size_t i=0;i<playedRoots.size();++i) {
+            const int root=playedRoots[i];
+            const int noteId=1000+pass*8+static_cast<int>(i);
+            const std::array<InputEvent,1> on{{{0,static_cast<int16_t>(root),
+                                                 true,false,noteId}}};
+            check(repeatedScale.process(on,1), "loop: process NoteOn");
+            const size_t expectedCount=octaveDoubled?4u:3u;
+            check(repeatedScale.outputCount()==expectedCount,
+                  "loop: note count unchanged by phrase restarts");
+            std::array<uint8_t,4> outputPitches{};
+            for(size_t j=0;j<expectedCount;++j)
+                outputPitches[j]=repeatedScale.output()[j].pitch;
+            check(outputPitches[0]==root,"loop: bass always equals trigger");
+            if(octaveDoubled)
+                check(outputPitches[3]==root+12,
+                      "ROOT OCTAVE DOUBLE must be exactly root+12");
+            if(pass==0) firstPass[i]=outputPitches;
+            else check(outputPitches==firstPass[i],
+                       "loop: every chord must repeat identical complete voicing");
+            const std::array<InputEvent,1> off{{{0,static_cast<int16_t>(root),
+                                                  false,true,noteId}}};
+            check(repeatedScale.process(off,1) &&
+                  repeatedScale.activeVoices()==0,
+                  "loop: no held notes after release");
+        }
+    }
+    // ROOT OCTAVE DOUBLE must never chase the highest AUTO upper voice:
+    // e.g. C3 + E4/G4 gets C4, not C5.
+    Chord expandedUpper{};
+    expandedUpper.accepted=true;
+    expandedUpper.count=3;
+    expandedUpper.notes={{60,76,79,0}};
+    pitches(doubleRootAbove(expandedUpper,60),{60,76,79,72});
+    // POWER already includes root+12, so do not duplicate a MIDI note.
+    VoicingSettings powerRepeat;
+    powerRepeat.character=Character::Power;
+    const auto powerWithDouble=doubleRootAbove(voice(generate(60,Settings{}),
+                                                      60,powerRepeat),60);
+    pitches(powerWithDouble,{60,67,72});
     std::cout << "ChordEngine tests PASS\n";
 }
