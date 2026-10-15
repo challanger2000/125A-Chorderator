@@ -266,6 +266,9 @@ class ChorderatorController final : public EditControllerEx1,
         if(control!=zoomButton_ || !activeEditor_) return;
         zoom_=zoom_ >= 1.25 ? 1.0 : 1.5;
         activeEditor_->setZoomFactor(zoom_);
+        // VSTGUI setZoomFactor changes the frame scaling only; Studio One
+        // also needs an explicit host resize request for the editor window.
+        activeEditor_->requestResize(VSTGUI::CPoint(1120.0*zoom_,600.0*zoom_));
         updateZoomText();
     }
     void refreshScaleNotes() {
