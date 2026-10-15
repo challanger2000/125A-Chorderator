@@ -204,6 +204,45 @@ int main() {
     }
     check(verifiedChords>10000,"QA: extensive harmonic coverage");
     check(autoDifferent>0,"QA: AUTO must yield some real inversions");
+    // Quantitative AUTO/OFF QA. Compare both upper voices over complete
+    // progressions, excluding bass which is deliberately anchored.
+    int measuredTransitions=0, improvedTransitions=0, worsenedTransitions=0;
+    int64_t autoTravel=0, offTravel=0;
+    for(auto scale : allScales) for(int tonic=0;tonic<12;++tonic)
+    for(int octave=4;octave<=5;++octave)
+    for(auto character : {Character::Classic,Character::Dark,Character::Wide}) {
+        Settings h;h.scale=scale;h.tonic=static_cast<uint8_t>(tonic);
+        VoicingSettings a;a.leading=Leading::Auto;a.character=character;
+        VoicingSettings o;o.leading=Leading::Off;o.character=character;
+        Chord pa{},po{};
+        constexpr std::array<int,16> steps{{0,4,5,3,1,4,0,2,5,0,3,4,1,5,2,0}};
+        for(int round=0;round<3;++round)for(int degree:steps) {
+            const int root=octave*12+tonic+intervals(scale)[degree];
+            Chord generated=generate(root,h);
+            if(!generated.accepted)continue;
+            Chord ca=voice(generated,root,a,pa.accepted?&pa:nullptr);
+            Chord co=voice(generated,root,o,po.accepted?&po:nullptr);
+            if(pa.accepted && po.accepted) {
+                int da=0,doo=0;
+                for(int i=1;i<3;++i) {
+                    da+=std::abs(static_cast<int>(ca.notes[i])-static_cast<int>(pa.notes[i]));
+                    doo+=std::abs(static_cast<int>(co.notes[i])-static_cast<int>(po.notes[i]));
+                }
+                autoTravel+=da;offTravel+=doo;
+                ++measuredTransitions;
+                if(da<doo)++improvedTransitions;
+                if(da>doo)++worsenedTransitions;
+            }
+            pa=ca;po=co;
+        }
+    }
+    std::cout<<"Voice-leading comparison: transitions="<<measuredTransitions
+             <<" AUTO travel="<<autoTravel<<" OFF travel="<<offTravel
+             <<" better="<<improvedTransitions<<" worse="<<worsenedTransitions<<"\\n";
+    check(measuredTransitions>10000 && improvedTransitions>0,
+          "QA: AUTO/OFF comparison must cover and improve real transitions");
+    check(autoTravel<offTravel,
+          "QA: AUTO must reduce aggregate upper-voice movement vs OFF");
     // Control NoteOns on the same sample apply regardless of host event order.
     ControlLayout layout;
     check(layout.valid() && layout.isControl(50) && !layout.isControl(60), "valid controls");
