@@ -85,6 +85,16 @@ int main() {
     }
     check(played[0].notes[0]==played[4].notes[0],
           "C-D-G-Ab-C return C root does not jump octave");
+    // The reported screenshot used DARK + Voice Leading OFF.
+    // The played root must stay at exactly its input register.
+    VoicingSettings darkOff;
+    darkOff.character=Character::Dark;
+    darkOff.leading=Leading::Off;
+    for(int root : std::array<int,5>{{60,62,67,68,60}}) {
+        const auto dark=voice(generate(root,naturalMinor),root,darkOff);
+        check(dark.accepted && dark.notes[0]==root,
+              "DARK/OFF: root stays in original octave");
+    }
     // Control NoteOns on the same sample apply regardless of host event order.
     ControlLayout layout;
     check(layout.valid() && layout.isControl(13) && !layout.isControl(60), "valid controls");
