@@ -17,7 +17,7 @@
 </control-tags>
 <template name="ChorderatorView" class="CViewContainer" origin="0, 0" size="1120, 600" minSize="1120, 600" maxSize="1680, 900" background-color="Bg" transparent="false">
 <view class="CView" origin="26, 12" size="138, 69" bitmap="BrandLogo" transparent="true"/>
-<view class="CTextLabel" origin="182, 22" size="620, 38" title="CHORDERATOR" font="Title" font-color="Text" transparent="true"/>
+<view class="CTextLabel" origin="182, 22" size="620, 38" title="125A CHORDERATOR" font="Title" font-color="Text" transparent="true"/>
 <view class="CTextButton" control-tag="UiZoom" origin="926, 37" size="170, 36" title="ZOOM 100 %" text-color="Text" text-color-highlighted="Accent" font="Normal" frame-color="Line" frame-width="1" round-radius="4" kick-style="true"/>
 <view class="CTextLabel" origin="34, 65" size="720, 22" title="INTELLIGENT MIDI CHORD ENGINE" font="Small" font-color="Muted" transparent="true"/>
 <view class="CViewContainer" origin="24, 110" size="520, 170" background-color="Panel" transparent="false">
