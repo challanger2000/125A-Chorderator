@@ -133,6 +133,58 @@ int main() {
     if(!trigger.process(b,1))mismatch("overlap rejected",errors);
     else std::cout<<"OVERLAPPED IDENTICAL TRIGGER: second NoteOn events="
                   <<trigger.outputCount()<<" (zero means no re-articulation)\n";
+    // Phrase reproducibility must not depend on having a full octave
+    // descent at the end. C2-Eb2-G2-Bb2 -> C2 falls only ten semitones.
+    int loopDiscrepancies=0;
+    for(auto mode:{Character::Classic,Character::Dark,Character::Wide})
+    for(bool doubleOn:{false,true}) {
+        MidiChordProcessor<> pattern;
+        Settings settings;settings.scale=Scale::NaturalMinor;
+        settings.rootOctaveDouble=doubleOn;
+        pattern.setSettings(settings);
+        VoicingSettings voiceSettings;
+        voiceSettings.character=mode;
+        voiceSettings.leading=Leading::Auto;
+        pattern.setVoicing(voiceSettings);
+        constexpr std::array<int,4> phrase{{48,51,55,58}};
+        std::array<std::array<uint8_t,4>,4> firstPitches{};
+        std::array<size_t,4> firstCounts{};
+        for(int cycle=0;cycle<4;++cycle) {
+            for(size_t i=0;i<phrase.size();++i) {
+                const int root=phrase[i],id=100+cycle*4+static_cast<int>(i);
+                const std::array<InputEvent,1> on{{{
+                    0,static_cast<int16_t>(root),true,false,id}}};
+                if(!pattern.process(on,1))mismatch("phrase NoteOn rejected",errors);
+                std::array<uint8_t,4> actual{};
+                const size_t count=pattern.outputCount();
+                if(count>4)mismatch("phrase emitted too many pitches",errors);
+                for(size_t n=0;n<count && n<actual.size();++n)
+                    actual[n]=pattern.output()[n].pitch;
+                if(cycle==0) {
+                    firstCounts[i]=count;
+                    firstPitches[i]=actual;
+                } else if(firstCounts[i]!=count || firstPitches[i]!=actual) {
+                    if(++loopDiscrepancies<=6)
+                        std::cout<<"LOOP REGISTER DRIFT: mode="<<static_cast<int>(mode)
+                                 <<" doubled="<<doubleOn
+                                 <<" cycle="<<cycle<<" index="<<i
+                                 <<" root="<<root
+                                 <<" expected upper="<<static_cast<int>(firstPitches[i][1])
+                                 <<","<<static_cast<int>(firstPitches[i][2])
+                                 <<" got="<<static_cast<int>(actual[1])
+                                 <<","<<static_cast<int>(actual[2])<<"\\n";
+                }
+                const std::array<InputEvent,1> off{{{
+                    0,static_cast<int16_t>(root),false,true,id}}};
+                if(!pattern.process(off,1))
+                    mismatch("phrase NoteOff rejected",errors);
+            }
+        }
+    }
+    std::cout<<"REPEATED SHORT-OCTAVE PHRASE DRIFT: "
+             <<loopDiscrepancies<<" mismatches across 6 configurations\\n";
+    if(loopDiscrepancies>0)
+        mismatch("AUTO chord phrases drift when descending less than 12 semitones",errors);
     std::cout<<"MUSICAL CONTRACT RESULT: "<<(errors?"FAIL":"PASS")
              <<" / "<<errors<<" failures\n";
     return errors?1:0;
