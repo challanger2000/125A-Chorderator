@@ -67,6 +67,24 @@ int main() {
     vo.leading=Leading::Auto; vo.character=Character::Wide;
     const Chord wide=voice(base,60,vo);
     check(wide.accepted && wide.notes[2]>wide.notes[0], "wide candidate");
+    // Repro reported in Studio One: C-D-G-Ab-C in C Natural Minor.
+    // Replaying the same C must not shift the root to another octave.
+    Settings naturalMinor;
+    naturalMinor.scale=Scale::NaturalMinor;
+    VoicingSettings autoClassic;
+    Chord previousVoicing{};
+    const std::array<int,5> progression{{60,62,67,68,60}};
+    std::array<Chord,5> played{};
+    for(size_t i=0;i<progression.size();++i) {
+        const int root=progression[i];
+        played[i]=voice(generate(root,naturalMinor),root,autoClassic,
+                        previousVoicing.accepted?&previousVoicing:nullptr);
+        check(played[i].accepted && played[i].notes[0]==root,
+              "Natural Minor root remains in played MIDI octave");
+        previousVoicing=played[i];
+    }
+    check(played[0].notes[0]==played[4].notes[0],
+          "C-D-G-Ab-C return C root does not jump octave");
     // Control NoteOns on the same sample apply regardless of host event order.
     ControlLayout layout;
     check(layout.valid() && layout.isControl(13) && !layout.isControl(60), "valid controls");
