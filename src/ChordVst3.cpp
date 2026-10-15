@@ -30,7 +30,7 @@ constexpr uint32_t kMagic=0x31444843u; // CHD1
 constexpr uint32_t kVersion=1;
 struct StoredState {
     uint32_t magic=kMagic, version=kVersion;
-    int32_t key=0, scale=0, chromatic=0, leading=1, character=0, doubled=0, controlBase=0;
+    int32_t key=0, scale=0, chromatic=0, leading=1, character=0, doubled=0, controlBase=24;
 };
 template<class T> bool ioWrite(IBStream* s,const T& v) {
     if (!s) return false;
@@ -103,7 +103,7 @@ class ChorderatorProcessor final : public AudioEffect {
         voicing.leading=static_cast<chorderator::Leading>(settings_.leading);
         voicing.character=static_cast<chorderator::Character>(settings_.character);
         core_.setVoicing(voicing);
-        core_.setControlLayout({0});
+        core_.setControlLayout({24});
     }
     void update(ParamID id,ParamValue v) {
         switch(id) {
