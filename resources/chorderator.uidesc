@@ -4,7 +4,7 @@
 <colors>
 <color name="Bg" rgba="#0D1115FF"/><color name="Panel" rgba="#19242CFF"/>
 <color name="Text" rgba="#E7ECEFFF"/><color name="Muted" rgba="#9AA7B0FF"/>
-<color name="Accent" rgba="#62C7B3FF"/><color name="Line" rgba="#35434CFF"/>
+<color name="ButtonDark" rgba="#25323AFF"/><color name="Accent" rgba="#62C7B3FF"/><color name="Line" rgba="#35434CFF"/>
 </colors>
 <fonts><font name="Title" font-name="Arial" size="29" bold="true"/>
 <font name="Heading" font-name="Arial" size="18" bold="true"/>
@@ -18,7 +18,7 @@
 <template name="ChorderatorView" class="CViewContainer" origin="0, 0" size="1120, 600" minSize="1120, 600" maxSize="1680, 900" background-color="Bg" transparent="false">
 <view class="CView" origin="26, 12" size="138, 69" bitmap="BrandLogo" transparent="true"/>
 <view class="CTextLabel" origin="182, 22" size="620, 38" title="125A CHORDERATOR" font="Title" font-color="Text" transparent="true"/>
-<view class="CTextButton" control-tag="UiZoom" origin="926, 37" size="170, 36" title="ZOOM 100 %" text-color="Text" text-color-highlighted="Accent" font="Normal" frame-color="Line" frame-width="1" round-radius="4" kick-style="true"/>
+<view class="CTextButton" control-tag="UiZoom" origin="926, 37" size="170, 36" title="ZOOM 100 %" text-color="Text" text-color-highlighted="Text" back-color="ButtonDark" font="Normal" frame-color="Line" frame-width="1" round-radius="4" kick-style="true"/>
 <view class="CTextLabel" origin="34, 65" size="720, 22" title="INTELLIGENT MIDI CHORD ENGINE" font="Small" font-color="Muted" transparent="true"/>
 <view class="CViewContainer" origin="24, 110" size="520, 170" background-color="Panel" transparent="false">
 <view class="CTextLabel" origin="20, 14" size="480, 28" title="KEY &amp; SCALE" font="Heading" font-color="Accent" transparent="true"/>
@@ -43,10 +43,10 @@
 <view class="COptionMenu" control-tag="Chromatic" origin="330, 94" size="160, 30" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
 </view>
 <view class="CViewContainer" origin="560, 300" size="536, 145" background-color="Panel" transparent="false">
-<view class="CTextLabel" origin="20, 12" size="490, 25" title="CHORD MODIFIERS" font="Heading" font-color="Accent" transparent="true"/>
-<view class="CTextLabel" origin="20, 52" size="275, 22" title="CONTROL BASE (MIDI NUMBER)" font="Normal" font-color="Muted" transparent="true"/>
+<view class="CTextLabel" origin="20, 12" size="490, 25" title="OPTIONAL MIDI CONTROL NOTES" font="Heading" font-color="Accent" transparent="true"/>
+<view class="CTextLabel" origin="20, 52" size="275, 22" title="START NOTE (MIDI)" font="Normal" font-color="Muted" transparent="true"/>
 <view class="COptionMenu" control-tag="ControlBase" origin="307, 45" size="200, 32" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
-<view class="CTextLabel" origin="20, 103" size="485, 22" title="BASE = NORMAL    BASE+1 = SUS2    BASE+2 = SUS4" font="Small" font-color="Text" transparent="true"/>
+<view class="CTextLabel" origin="20, 103" size="485, 22" title="Play with chord: 12 = NORMAL, 13 = SUS2, 14 = SUS4" font="Small" font-color="Text" transparent="true"/>
 </view>
 <view class="CViewContainer" origin="24, 464" size="1072, 110" background-color="Panel" transparent="false">
 <view class="CTextLabel" origin="20, 14" size="1032, 27" title="CURRENT CHORD / OUTPUT NOTES" font="Heading" font-color="Accent" transparent="true"/>
