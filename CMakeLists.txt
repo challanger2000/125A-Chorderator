@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(ChorderatorCore LANGUAGES CXX)
+project(Chorderator VERSION 1.0.0 LANGUAGES CXX)
 enable_testing()
 add_executable(chorderator_core_tests tests/ChordEngineTests.cpp)
 target_compile_features(chorderator_core_tests PRIVATE cxx_std_17)
