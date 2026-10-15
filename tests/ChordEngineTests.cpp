@@ -86,11 +86,12 @@ int main() {
         const int root=progression[i];
         played[i]=voice(generate(root,naturalMinor),root,autoClassic,
                         previousVoicing.accepted?&previousVoicing:nullptr);
-        check(played[i].accepted && played[i].notes[0]==root,
+        check(played[i].accepted && (played[i].notes[0]==root || played[i].notes[1]==root || played[i].notes[2]==root),
               "Natural Minor root remains in played MIDI octave");
         previousVoicing=played[i];
     }
-    check(played[0].notes[0]==played[4].notes[0],
+    check((played[0].notes[0]==60 || played[0].notes[1]==60 || played[0].notes[2]==60) &&
+          (played[4].notes[0]==60 || played[4].notes[1]==60 || played[4].notes[2]==60),
           "C-D-G-Ab-C return C root does not jump octave");
     // The reported screenshot used DARK + Voice Leading OFF.
     // The played root must stay at exactly its input register.
@@ -110,7 +111,7 @@ int main() {
             for(int root : std::array<int,5>{{60,62,67,68,60}}) {
                 auto current=voice(generate(root,naturalMinor),root,vset,
                                    prior.accepted?&prior:nullptr);
-                check(current.accepted && current.notes[0]==root,
+                check(current.accepted && (current.notes[0]==root || current.notes[1]==root || current.notes[2]==root),
                       "voicing all character/leading combinations preserve root");
                 for(int n=1;n<current.count;++n)
                     check(current.notes[n]>current.notes[n-1],
@@ -119,6 +120,20 @@ int main() {
             }
         }
     }
+    // AUTO must produce a genuinely different, smoother voicing on a
+    // progression that benefits from inversion: C major -> F major.
+    Settings majorScale;
+    VoicingSettings offMode; offMode.leading=Leading::Off;
+    const Chord cMajor=voice(generate(60,majorScale),60,offMode);
+    const Chord fOff=voice(generate(65,majorScale),65,offMode,&cMajor);
+    VoicingSettings autoMode; autoMode.leading=Leading::Auto;
+    const Chord fAuto=voice(generate(65,majorScale),65,autoMode,&cMajor);
+    check(fAuto.accepted && fOff.accepted && fAuto.notes!=fOff.notes,
+          "AUTO must differ from OFF when smooth inversion exists");
+    check(fAuto.notes[0]<fAuto.notes[1] && fAuto.notes[1]<fAuto.notes[2],
+          "AUTO inversion sorted");
+    check(fAuto.notes[0]==65 || fAuto.notes[1]==65 || fAuto.notes[2]==65,
+          "AUTO inversion preserves played F root register");
     // Control NoteOns on the same sample apply regardless of host event order.
     ControlLayout layout;
     check(layout.valid() && layout.isControl(50) && !layout.isControl(60), "valid controls");
