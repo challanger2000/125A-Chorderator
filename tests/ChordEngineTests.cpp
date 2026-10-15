@@ -1,15 +1,14 @@
 #include "../src/ChordEngine.h"
 #include <cstdlib>
 #include <initializer_list>
-#include <stdexcept>
 #include <iostream>
 using namespace chorderator;
 static void check(bool ok, const char* msg) {
     if (!ok) { std::cerr << "FAIL: " << msg << '\n'; std::exit(EXIT_FAILURE); }
 }
 static void pitches(Chord c, std::initializer_list<int> expected) {
-    check(c.accepted && c.count==expected.size(), "chord accepted and count", "regression");
-    size_t i=0; for (int v:expected) check(c.notes[i++]==v, "exact chord pitch", "regression");
+    check(c.accepted && c.count==expected.size(), "chord accepted and count");
+    size_t i=0; for (int v:expected) check(c.notes[i++]==v, "exact chord pitch");
 }
 int main() {
     Settings s;
