@@ -11,6 +11,8 @@ on:
       - "src/MidiControl.h"
       - "CMakeLists.txt"
       - ".github/workflows/vst3-experimental.yml"
+permissions:
+  contents: read
 jobs:
   windows-vst3:
     runs-on: windows-latest
@@ -18,5 +20,29 @@ jobs:
       - uses: actions/checkout@v4
       - name: Configure VST3 SDK
         run: cmake -S . -B build-vst3 -DCHORDERATOR_BUILD_VST3=ON
-      - name: Build VST3
-        run: cmake --build build-vst3 --config Release --target Chorderator
+      - name: Build VST3 and Steinberg Validator
+        run: cmake --build build-vst3 --config Release --target Chorderator validator
+      - name: Stage and verify VST3 bundle
+        shell: pwsh
+        run: |
+          $bundle = Get-ChildItem build-vst3 -Recurse -Directory -Filter Chorderator.vst3 | Where-Object { Test-Path (Join-Path $_.FullName 'Contents') } | Select-Object -First 1
+          if (-not $bundle) { throw 'Chorderator.vst3 bundle missing' }
+          $binary = Join-Path $bundle.FullName 'Contents/x86_64-win/Chorderator.vst3'
+          if (-not (Test-Path -PathType Leaf $binary)) { throw 'Windows x64 VST3 binary missing' }
+          New-Item -ItemType Directory -Force -Path artifact | Out-Null
+          Copy-Item -Path $bundle.FullName -Destination artifact -Recurse -Force
+          $staged = Join-Path (Resolve-Path artifact).Path 'Chorderator.vst3'
+          if (-not (Test-Path -PathType Container $staged)) { throw 'Staged VST3 bundle missing' }
+      - name: Steinberg VST3 validation
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem build-vst3 -Recurse -File -Filter validator.exe | Select-Object -First 1
+          if (-not $exe) { throw 'Steinberg validator.exe missing' }
+          & $exe.FullName "$env:GITHUB_WORKSPACE/artifact/Chorderator.vst3"
+          if ($LASTEXITCODE -ne 0) { throw "Steinberg validator failed: $LASTEXITCODE" }
+      - name: Upload development VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: Chorderator-v1.0.0-Windows-x64-DEVELOPMENT
+          path: artifact/
+          if-no-files-found: error
