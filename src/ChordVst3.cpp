@@ -259,17 +259,16 @@ class ChorderatorController final : public EditControllerEx1,
     double zoom_=1.0;
     void updateZoomText() {
         if(!zoomButton_) return;
-        zoomButton_->setTitle(zoom_ >= 1.25 ? "ZOOM 150 %" : "ZOOM 100 %");
+        zoomButton_->setTitle(zoom_ >= 1.25 ? "150 %" : "100 %");
         zoomButton_->invalid();
     }
     void valueChanged(VSTGUI::CControl* control) SMTG_OVERRIDE {
-        if(control!=zoomButton_ || !activeEditor_) return;
+        // Match the working 125A MIDIator kick-button handling: act only
+        // on the press edge, not on the release/reset notification.
+        if(control!=zoomButton_ || control->getValueNormalized()<=0.5f) return;
         zoom_=zoom_ >= 1.25 ? 1.0 : 1.5;
-        activeEditor_->setZoomFactor(zoom_);
-        // VSTGUI setZoomFactor changes the frame scaling only; Studio One
-        // also needs an explicit host resize request for the editor window.
-        activeEditor_->requestResize(VSTGUI::CPoint(1120.0*zoom_,600.0*zoom_));
         updateZoomText();
+        if(activeEditor_) activeEditor_->setZoomFactor(zoom_);
     }
     void refreshScaleNotes() {
         if(!allowedNotes_) return;
