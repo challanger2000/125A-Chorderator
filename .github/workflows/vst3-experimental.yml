@@ -1,0 +1,22 @@
+name: Chorderator VST3 experimental build
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop/v1.0.0]
+    paths:
+      - "src/ChordVst3.cpp"
+      - "src/MidiChordProcessor.h"
+      - "src/ChordEngine.h"
+      - "src/ChordVoicing.h"
+      - "src/MidiControl.h"
+      - "CMakeLists.txt"
+      - ".github/workflows/vst3-experimental.yml"
+jobs:
+  windows-vst3:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure VST3 SDK
+        run: cmake -S . -B build-vst3 -DCHORDERATOR_BUILD_VST3=ON
+      - name: Build VST3
+        run: cmake --build build-vst3 --config Release --target Chorderator
