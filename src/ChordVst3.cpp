@@ -2,6 +2,8 @@
 #include "public.sdk/source/vst/vstaudioeffect.h"
 #include "public.sdk/source/vst/vsteditcontroller.h"
 #include "public.sdk/source/main/pluginfactory.h"
+#include "vstgui/plugin-bindings/vst3editor.h"
+#include <cstring>
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
@@ -215,6 +217,15 @@ public:
         parameters.addParameter(STR16("Root Double"),nullptr,1,0,ParameterInfo::kCanAutomate,kRootDouble);
         parameters.addParameter(STR16("Control Base"),nullptr,125,12.0/125.0,ParameterInfo::kCanAutomate,kControlBase);
         return kResultOk;
+    }
+    IPlugView* PLUGIN_API createView(FIDString name) SMTG_OVERRIDE {
+        if(name && std::strcmp(name,ViewType::kEditor)==0) {
+            auto* editor=new VSTGUI::VST3Editor(this,"ChorderatorView","chorderator.uidesc");
+            editor->setAllowedZoomFactors({1.0,1.5});
+            editor->setZoomFactor(1.0);
+            return editor;
+        }
+        return nullptr;
     }
     tresult PLUGIN_API setComponentState(IBStream* stream) SMTG_OVERRIDE {
         StoredState state{};
