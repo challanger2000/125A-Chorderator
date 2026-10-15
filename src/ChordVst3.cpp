@@ -4,6 +4,7 @@
 #include "public.sdk/source/main/pluginfactory.h"
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
+#include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "pluginterfaces/base/ibstream.h"
 #include <algorithm>
 #include <array>
@@ -63,6 +64,7 @@ int quantized(ParamValue normalized,int count) {
 class ChorderatorProcessor final : public AudioEffect {
     chorderator::MidiChordProcessor<64,1024> core_;
     StoredState settings_{};
+    bool transportWasPlaying_=false;
     void apply() {
         chorderator::Settings chord;
         chord.tonic=static_cast<uint8_t>(settings_.key);
@@ -131,7 +133,7 @@ public:
         return format==kSample32 || format==kSample64?kResultTrue:kResultFalse;
     }
     tresult PLUGIN_API setActive(TBool active) SMTG_OVERRIDE {
-        if(!active) core_.stop();
+        if(!active) { core_.stop(); transportWasPlaying_=false; }
         return AudioEffect::setActive(active);
     }
     tresult PLUGIN_API getState(IBStream* stream) SMTG_OVERRIDE {
@@ -155,6 +157,16 @@ public:
             }
         }
         if(!data.outputEvents) return kResultOk;
+        // Transport discontinuity: release tracked notes before handling this block.
+        // Not all hosts send process() after stop, so setActive(false) remains a
+        // separate lifecycle reset; native host testing is mandatory.
+        const bool transportKnown = data.processContext != nullptr;
+        const bool playing = transportKnown &&
+            ((data.processContext->state & ProcessContext::kPlaying) != 0);
+        if(transportKnown && transportWasPlaying_ && !playing) {
+            if(!core_.stop() || !emit(data.outputEvents,0)) return kResultFalse;
+        }
+        if(transportKnown) transportWasPlaying_=playing;
         constexpr size_t kCapacity=256;
         std::array<chorderator::InputEvent,kCapacity> incoming{};
         size_t count=0;
@@ -173,6 +185,16 @@ public:
                 incoming[count++]={static_cast<uint32_t>(event.sampleOffset),
                                     static_cast<int16_t>(n),on,off,id};
             }
+        }
+        // Host event ordering is not assumed beyond sample offsets.
+        // Stable insertion sort (bounded 256 events; no allocation).
+        for(size_t i=1;i<count;++i) {
+            const auto item=incoming[i];
+            size_t j=i;
+            while(j>0 && incoming[j-1].offset>item.offset) {
+                incoming[j]=incoming[j-1]; --j;
+            }
+            incoming[j]=item;
         }
         if(!core_.process(incoming,count)) return kResultFalse;
         return emit(data.outputEvents,-1)?kResultOk:kResultFalse;
