@@ -47,10 +47,10 @@
 <view class="CTextButton" control-tag="Chromatic" origin="330, 94" size="160, 30" title="OFF" text-color="Text" text-color-highlighted="Text" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false" frame-color="Line" frame-width="1"/>
 </view>
 <view class="CViewContainer" origin="560, 300" size="536, 145" background-color="Panel" transparent="false">
-<view class="CTextLabel" origin="20, 12" size="490, 25" title="CHORD MODIFIERS - LOWEST MIDI OCTAVE" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
-<view class="CTextLabel" origin="20, 51" size="490, 22" title="Add a control note at the same start as the chord" font="Normal" font-color="Muted" transparent="true"/>
+<view class="CTextLabel" origin="20, 12" size="490, 25" title="CHORD MODIFIERS" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
+<view class="CTextLabel" origin="20, 51" size="490, 22" title="Place a control note at the start of the chord" font="Normal" font-color="Muted" transparent="true"/>
 
-<view class="CTextLabel" origin="20, 103" size="485, 22" title="C (MIDI 0) = NORMAL     D (2) = SUS2     E (4) = SUS4" font="Small" font-color="Text" transparent="true"/>
+<view class="CTextLabel" origin="20, 103" size="485, 22" title="C0 = NORMAL       D0 = SUS2       E0 = SUS4" font="Small" font-color="Text" transparent="true"/>
 </view>
 <view class="CViewContainer" origin="24, 464" size="1072, 110" background-color="Panel" transparent="false">
 <view class="CTextLabel" origin="20, 14" size="1032, 27" title="CURRENT CHORD / OUTPUT NOTES" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
