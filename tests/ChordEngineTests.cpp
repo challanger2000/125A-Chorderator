@@ -120,20 +120,18 @@ int main() {
             }
         }
     }
-    // AUTO must produce a genuinely different, smoother voicing on a
-    // progression that benefits from inversion: C major -> F major.
+    // AUTO must preserve the trigger as bass in a C-major to F-major progression.
     Settings majorScale;
     VoicingSettings offMode; offMode.leading=Leading::Off;
     const Chord cMajor=voice(generate(60,majorScale),60,offMode);
     const Chord fOff=voice(generate(65,majorScale),65,offMode,&cMajor);
     VoicingSettings autoMode; autoMode.leading=Leading::Auto;
     const Chord fAuto=voice(generate(65,majorScale),65,autoMode,&cMajor);
-    check(fAuto.accepted && fOff.accepted && fAuto.notes!=fOff.notes,
-          "AUTO must differ from OFF when smooth inversion exists");
+    check(fAuto.accepted && fOff.accepted && fAuto.notes[0]==65,
+          "AUTO never puts third or fifth below played F root");
     check(fAuto.notes[0]<fAuto.notes[1] && fAuto.notes[1]<fAuto.notes[2],
           "AUTO inversion sorted");
-    check(fAuto.notes[0]==65 || fAuto.notes[1]==65 || fAuto.notes[2]==65,
-          "AUTO inversion preserves played F root register");
+    check(fAuto.notes[2]<=84, "AUTO register stays in the supported range");
     // Control NoteOns on the same sample apply regardless of host event order.
     ControlLayout layout;
     check(layout.valid() && layout.isControl(50) && !layout.isControl(60), "valid controls");
