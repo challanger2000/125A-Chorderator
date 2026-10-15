@@ -26,44 +26,51 @@ inline Chord voice(Chord in, int rootMidi, VoicingSettings settings, const Chord
         in.count = 3;
         return in;
     }
-    // Revoice chord tones within a +-12 semitone band of incoming root.
-    // Minimize squared movements from the last chord (voice-leading), with stable
-    // lexicographic tie-breaking. No change if leading is off.
+    // The trigger note is always the bass. OFF is deterministic and does
+    // not depend on the previous chord. AUTO only moves the two upper voices.
     const std::array<int,3> base{{in.notes[0],in.notes[1],in.notes[2]}};
+    if (settings.leading==Leading::Off && settings.character==Character::Classic)
+        return in;
     std::array<int,3> best=base;
     int64_t bestScore=std::numeric_limits<int64_t>::max();
-    if (settings.leading == Leading::Off && settings.character == Character::Classic) return in;
-    for (int shift1=-1;shift1<=1;++shift1)
-    for (int shift2=-1;shift2<=1;++shift2) {
-        // Keep the original root pitch, but allow the 3rd/5th to move
-        // below it in AUTO. This enables real inversions without shifting
-        // the user's played root up or down an octave.
-        std::array<int,3> c{{rootMidi,base[1]+12*shift1,base[2]+12*shift2}};
-        if (c[1]<0 || c[1]>127 || c[2]<0 || c[2]>127) continue;
-        std::sort(c.begin(),c.end());
-        if (!(c[0]<c[1] && c[1]<c[2])) continue;
-        // An instrument triggered by a bass/root note must retain that note as
-        // the LOWEST voice. Earlier AUTO allowed upper chord tones to fall
-        // below it, causing abrupt bass/register switches after repetitions.
-        if (c[0]!=rootMidi || c[2]>rootMidi+19) continue;
-        const int spread=c[2]-c[0];
-        const int reference= settings.character==Character::Wide?19:
-                             settings.character==Character::Dark?7:12;
-        const int diff=spread-reference;
-        int64_t score=static_cast<int64_t>(diff)*diff*2;
-        if (settings.character==Character::Dark) score+=(c[2]-rootMidi+12)*2;
-        if (settings.leading==Leading::Auto && previous && previous->accepted && previous->count>=3) {
-            for(int i=0;i<3;++i) {
-                const int movement=c[i]-static_cast<int>(previous->notes[i]);
-                score+=static_cast<int64_t>(movement)*movement*8;
+    const bool hasPrevious=settings.leading==Leading::Auto && previous &&
+                           previous->accepted && previous->count>=3;
+    // The previous MIDI chord is already stored in ascending pitch order.
+    // Keep a stable register near the trigger, rather than following the
+    // previous chord through unlimited octave changes.
+    for(int shiftThird=-1;shiftThird<=1;++shiftThird)
+    for(int shiftFifth=-1;shiftFifth<=1;++shiftFifth) {
+        const int n1=base[1]+12*shiftThird;
+        const int n2=base[2]+12*shiftFifth;
+        if(n1<=rootMidi || n2<=rootMidi || n1>127 || n2>127 ||
+           n1>rootMidi+23 || n2>rootMidi+23 || n1==n2) continue;
+        std::array<int,3> candidate{{rootMidi,std::min(n1,n2),std::max(n1,n2)}};
+        if (candidate[2]-candidate[1]>12) continue;
+        // Register and spacing penalty prevents gradual octave drift.
+        const int span=candidate[2]-rootMidi;
+        const int target=settings.character==Character::Wide?19:
+                         settings.character==Character::Dark?10:12;
+        int64_t score=static_cast<int64_t>(span-target)*(span-target)*2;
+        // Stay near the played octave even after many repetitions.
+        score+=static_cast<int64_t>(candidate[1]-rootMidi-4)*
+               (candidate[1]-rootMidi-4);
+        if(hasPrevious) {
+            for(int i=1;i<3;++i) {
+                const int movement=candidate[i]-static_cast<int>(previous->notes[i]);
+                score+=static_cast<int64_t>(movement)*movement*5;
+                // Discourage large individual voice jumps.
+                if(movement>7 || movement< -7) score+=120;
             }
         } else {
-            for(int i=0;i<3;++i) {
-                const int movement=c[i]-base[i];
-                score+=static_cast<int64_t>(movement)*movement;
+            for(int i=1;i<3;++i) {
+                const int movement=candidate[i]-base[i];
+                score+=static_cast<int64_t>(movement)*movement*6;
             }
         }
-        if (score<bestScore || (score==bestScore && c<best)) {bestScore=score;best=c;}
+        if(score<bestScore || (score==bestScore && candidate<best)) {
+            bestScore=score;
+            best=candidate;
+        }
     }
     if (bestScore==std::numeric_limits<int64_t>::max()) return in;
     for(int i=0;i<3;++i) in.notes[i]=static_cast<uint8_t>(best[i]);
