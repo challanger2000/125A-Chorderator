@@ -132,6 +132,17 @@ int main() {
     check(fAuto.notes[0]<fAuto.notes[1] && fAuto.notes[1]<fAuto.notes[2],
           "AUTO inversion sorted");
     check(fAuto.notes[2]<=84, "AUTO register stays in the supported range");
+    // C major to G major below it: AUTO keeps upper voices nearby,
+    // whereas OFF uses the default root-position triad.
+    const Chord gOff=voice(generate(55,majorScale),55,offMode,&cMajor);
+    const Chord gAuto=voice(generate(55,majorScale),55,autoMode,&cMajor);
+    check(gAuto.accepted && gOff.accepted && gAuto.notes!=gOff.notes,
+          "AUTO must differ from OFF when smooth upper-voice motion exists");
+    check(gAuto.notes[0]==55 && gAuto.notes[1]>55 && gAuto.notes[2]>gAuto.notes[1],
+          "AUTO retains trigger bass and sorted upper voices");
+    // Repeating the same chord must not walk to a higher octave.
+    const Chord gRepeat=voice(generate(55,majorScale),55,autoMode,&gAuto);
+    check(gRepeat.notes==gAuto.notes,"AUTO repeated chord remains in stable register");
     // Control NoteOns on the same sample apply regardless of host event order.
     ControlLayout layout;
     check(layout.valid() && layout.isControl(50) && !layout.isControl(60), "valid controls");
