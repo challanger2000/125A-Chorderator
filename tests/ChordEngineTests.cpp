@@ -1,6 +1,7 @@
 #include "../src/ChordEngine.h"
 #include "../src/ChordVoicing.h"
 #include "../src/MidiControl.h"
+#include "../src/MidiChordProcessor.h"
 #include <cstdlib>
 #include <initializer_list>
 #include <iostream>
@@ -85,5 +86,32 @@ int main() {
     layout.basePitch=127;
     check(!layout.valid() && modifierAt(firstOrder,3,12,layout).conflict,
           "invalid control range rejected");
+    // End-to-end event core: one trigger -> chord, NoteOff releases it.
+    MidiChordProcessor<> proc;
+    VoicingSettings exact;
+    exact.leading=Leading::Off;
+    proc.setVoicing(exact);
+    std::array<InputEvent,4> batch{{{0,60,true,false,101},
+                                    {0,14,true,false,201},
+                                    {48,60,false,true,101},
+                                    {48,14,false,true,201}}};
+    check(proc.process(batch,4), "processor accepted event block");
+    check(proc.outputCount()==6, "three NoteOn and three NoteOff");
+    check(proc.output()[0].on && proc.output()[0].pitch==60, "root NoteOn");
+    check(proc.output()[1].on && proc.output()[1].pitch==65, "SUS4 third");
+    check(proc.output()[2].on && proc.output()[2].pitch==67, "fifth NoteOn");
+    check(!proc.output()[3].on && proc.output()[3].offset==48, "released on correct offset");
+    check(proc.activeVoices()==0, "no hanging voice");
+    // Two identical chords share sounding pitch ownership; only last off stops pitch.
+    std::array<InputEvent,2> overlap{{{0,60,true,false,101},{10,60,true,false,102}}};
+    check(proc.process(overlap,2) && proc.outputCount()==3, "overlap avoids double NoteOn");
+    std::array<InputEvent,1> releaseFirst{{{0,60,false,true,101}}};
+    check(proc.process(releaseFirst,1) && proc.outputCount()==0, "first release keeps second alive");
+    std::array<InputEvent,1> releaseLast{{{0,60,false,true,102}}};
+    check(proc.process(releaseLast,1) && proc.outputCount()==3, "last release emits offs");
+    check(proc.stop() && proc.outputCount()==0, "panic after silence");
+    // Muted control and invalid notes generate no MIDI.
+    std::array<InputEvent,1> onlyControl{{{0,13,true,false,9}}};
+    check(proc.process(onlyControl,1) && proc.outputCount()==0, "control note is silent");
     std::cout << "ChordEngine tests PASS\n";
 }
