@@ -121,18 +121,18 @@ int main() {
     }
     // Control NoteOns on the same sample apply regardless of host event order.
     ControlLayout layout;
-    check(layout.valid() && layout.isControl(2) && !layout.isControl(60), "valid controls");
+    check(layout.valid() && layout.isControl(26) && !layout.isControl(60), "valid controls");
     const std::array<InputEvent,3> firstOrder{{{12,60,true,false,11},
-                                                {12,4,true,false,12},
-                                                {13,4,false,true,12}}};
-    const std::array<InputEvent,3> reverseOrder{{{12,4,true,false,12},
+                                                {12,28,true,false,12},
+                                                {13,28,false,true,12}}};
+    const std::array<InputEvent,3> reverseOrder{{{12,28,true,false,12},
                                                   {12,60,true,false,11},
-                                                  {13,4,false,true,12}}};
+                                                  {13,28,false,true,12}}};
     check(modifierAt(firstOrder,3,12,layout).variant==Variant::Sus4, "sus4 selected");
     check(modifierAt(reverseOrder,3,12,layout).variant==Variant::Sus4, "order independent");
     check(modifierAt(firstOrder,3,13,layout).variant==Variant::Normal, "no held mode");
-    const std::array<InputEvent,2> conflicting{{{4,2,true,false,1},
-                                                 {4,4,true,false,2}}};
+    const std::array<InputEvent,2> conflicting{{{4,26,true,false,1},
+                                                 {4,28,true,false,2}}};
     const auto rejected=modifierAt(conflicting,2,4,layout);
     check(rejected.conflict && rejected.variant==Variant::Normal, "conflicting modifiers safe");
     layout.basePitch=127;
@@ -144,9 +144,9 @@ int main() {
     exact.leading=Leading::Off;
     proc.setVoicing(exact);
     std::array<InputEvent,4> batch{{{0,60,true,false,101},
-                                    {0,4,true,false,201},
+                                    {0,28,true,false,201},
                                     {48,60,false,true,101},
-                                    {48,4,false,true,201}}};
+                                    {48,28,false,true,201}}};
     check(proc.process(batch,4), "processor accepted event block");
     check(proc.outputCount()==6, "three NoteOn and three NoteOff");
     check(proc.output()[0].on && proc.output()[0].pitch==60, "root NoteOn");
@@ -165,7 +165,7 @@ int main() {
     // Muted control and invalid notes generate no MIDI.
     // Every reserved control key must be completely silent on NoteOn and
     // NoteOff, including while a musical chord is already sounding.
-    for(int pitch : {0,2,4}) {
+    for(int pitch : {24,26,28}) {
         MidiChordProcessor<> silent;
         silent.setVoicing(exact);
         std::array<InputEvent,2> pair{{{0,static_cast<int16_t>(pitch),true,false,9},
@@ -182,7 +182,7 @@ int main() {
         check(silent.process(release,1) && silent.outputCount()==3,
               "musical chord releases normally");
     }
-    std::array<InputEvent,1> onlyControl{{{0,0,true,false,9}}};
+    std::array<InputEvent,1> onlyControl{{{0,24,true,false,9}}};
     check(proc.process(onlyControl,1) && proc.outputCount()==0, "normal key is silent");
     // Hosts may send noteId=-1 for every note. Two overlapping C notes
     // must remain independently owned; first off cannot silence the second.
