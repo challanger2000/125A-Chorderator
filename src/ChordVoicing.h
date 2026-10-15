@@ -38,6 +38,9 @@ inline Chord voice(Chord in, int rootMidi, VoicingSettings settings, const Chord
         std::array<int,3> c{{base[0]+12*shift0,base[1]+12*shift1,base[2]+12*shift2}};
         if (c[0]<0 || c[2]>127 || c[1]<0 || c[1]>127 || c[0]>127 || c[2]<0) continue;
         if (!(c[0]<c[1] && c[1]<c[2])) continue;
+        // CLASSIC preserves the played root register. AUTO may move upper
+        // voices, but must not octave-jump the incoming MIDI root.
+        if (settings.character==Character::Classic && c[0]!=rootMidi) continue;
         // Anchor center to the user's trigger octave.
         if (c[0]<rootMidi-12 || c[2]>rootMidi+24) continue;
         const int spread=c[2]-c[0];
