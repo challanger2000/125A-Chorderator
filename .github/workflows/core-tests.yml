@@ -5,6 +5,9 @@ on:
     branches: [develop/v1.0.0]
     paths:
       - "src/ChordEngine.h"
+      - "src/ChordVoicing.h"
+      - "src/MidiChordProcessor.h"
+      - "src/MidiControl.h"
       - "tests/ChordEngineTests.cpp"
       - "CMakeLists.txt"
       - ".github/workflows/core-tests.yml"
@@ -18,4 +21,4 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
       - name: Test
-        run: ctest --test-dir build -C Release --output-on-failure
+        run: ctest --test-dir build -C Release --verbose
