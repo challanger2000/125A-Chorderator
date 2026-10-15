@@ -3,6 +3,9 @@
 #include "public.sdk/source/vst/vsteditcontroller.h"
 #include "public.sdk/source/main/pluginfactory.h"
 #include "vstgui/plugin-bindings/vst3editor.h"
+#include "vstgui/lib/controls/ctextlabel.h"
+#include "vstgui/uidescription/uiattributes.h"
+#include <string>
 #include <cstring>
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
@@ -203,7 +206,39 @@ public:
     }
 };
 
-class ChorderatorController final : public EditControllerEx1 {
+class ChorderatorController final : public EditControllerEx1,
+    public VSTGUI::VST3EditorDelegate {
+    VSTGUI::CTextLabel* allowedNotes_=nullptr;
+    void refreshScaleNotes() {
+        if(!allowedNotes_) return;
+        static constexpr const char* names[]={"C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"};
+        const int tonic=quantized(getParamNormalized(kKey),12);
+        const auto scale=static_cast<chorderator::Scale>(quantized(getParamNormalized(kScale),4));
+        const auto degrees=chorderator::intervals(scale);
+        std::string value="Allowed notes: ";
+        for(size_t i=0;i<degrees.size();++i) {
+            if(i) value+="  ";
+            value+=names[(tonic+degrees[i])%12];
+        }
+        allowedNotes_->setText(value.c_str());
+        allowedNotes_->invalid();
+    }
+public:
+    VSTGUI::CView* verifyView(VSTGUI::CView* view,
+        const VSTGUI::UIAttributes& attributes,
+        const VSTGUI::IUIDescription*, VSTGUI::VST3Editor*) SMTG_OVERRIDE {
+        const auto* id=attributes.getAttributeValue("chorderator-id");
+        if(id && *id=="allowedNotes") allowedNotes_=dynamic_cast<VSTGUI::CTextLabel*>(view);
+        refreshScaleNotes();
+        return view;
+    }
+    void willClose(VSTGUI::VST3Editor*) SMTG_OVERRIDE { allowedNotes_=nullptr; }
+    tresult PLUGIN_API setParamNormalized(ParamID id,ParamValue value) SMTG_OVERRIDE {
+        const auto result=EditControllerEx1::setParamNormalized(id,value);
+        if(id==kKey || id==kScale) refreshScaleNotes();
+        return result;
+    }
+
 public:
     static FUnknown* create(void*) { return static_cast<IEditController*>(new ChorderatorController()); }
     tresult PLUGIN_API initialize(FUnknown* context) SMTG_OVERRIDE {
@@ -241,6 +276,7 @@ public:
     IPlugView* PLUGIN_API createView(FIDString name) SMTG_OVERRIDE {
         if(name && std::strcmp(name,ViewType::kEditor)==0) {
             auto* editor=new VSTGUI::VST3Editor(this,"ChorderatorView","chorderator.uidesc");
+            editor->setDelegate(this);
             editor->setAllowedZoomFactors({1.0,1.5});
             editor->setZoomFactor(1.0);
             return editor;
