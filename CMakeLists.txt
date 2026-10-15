@@ -16,7 +16,7 @@ if(CHORDERATOR_BUILD_VST3)
   set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "" FORCE)
   set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "" FORCE)
   set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "" FORCE)
-  set(SMTG_ENABLE_VSTGUI_SUPPORT OFF CACHE BOOL "" FORCE)
+  set(SMTG_ENABLE_VSTGUI_SUPPORT ON CACHE BOOL "" FORCE)
   include(FetchContent)
   FetchContent_Declare(vst3sdk
     GIT_REPOSITORY https://github.com/steinbergmedia/vst3sdk.git
@@ -25,7 +25,8 @@ if(CHORDERATOR_BUILD_VST3)
   )
   FetchContent_MakeAvailable(vst3sdk)
   smtg_add_vst3plugin(Chorderator src/ChordVst3.cpp)
-  target_link_libraries(Chorderator PRIVATE sdk)
+  target_link_libraries(Chorderator PRIVATE sdk vstgui_support)
+  smtg_target_add_plugin_resources(Chorderator RESOURCES resources/chorderator.uidesc)
   target_compile_features(Chorderator PRIVATE cxx_std_17)
   if(WIN32)
     target_sources(Chorderator PRIVATE
