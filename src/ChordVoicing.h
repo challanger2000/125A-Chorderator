@@ -1,6 +1,7 @@
 #pragma once
 #include "ChordEngine.h"
 #include <array>
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 
@@ -25,34 +26,34 @@ inline Chord voice(Chord in, int rootMidi, VoicingSettings settings, const Chord
         in.count = 3;
         return in;
     }
-    // Rotate chord tone placements within a +-12 semitone band of incoming root.
+    // Revoice chord tones within a +-12 semitone band of incoming root.
     // Minimize squared movements from the last chord (voice-leading), with stable
     // lexicographic tie-breaking. No change if leading is off.
     const std::array<int,3> base{{in.notes[0],in.notes[1],in.notes[2]}};
     std::array<int,3> best=base;
     int64_t bestScore=std::numeric_limits<int64_t>::max();
     if (settings.leading == Leading::Off && settings.character == Character::Classic) return in;
-    for (int shift0=-1;shift0<=1;++shift0)
     for (int shift1=-1;shift1<=1;++shift1)
     for (int shift2=-1;shift2<=1;++shift2) {
-        std::array<int,3> c{{base[0]+12*shift0,base[1]+12*shift1,base[2]+12*shift2}};
-        if (c[0]<0 || c[2]>127 || c[1]<0 || c[1]>127 || c[0]>127 || c[2]<0) continue;
+        // Keep the original root pitch, but allow the 3rd/5th to move
+        // below it in AUTO. This enables real inversions without shifting
+        // the user's played root up or down an octave.
+        std::array<int,3> c{{rootMidi,base[1]+12*shift1,base[2]+12*shift2}};
+        if (c[1]<0 || c[1]>127 || c[2]<0 || c[2]>127) continue;
+        std::sort(c.begin(),c.end());
         if (!(c[0]<c[1] && c[1]<c[2])) continue;
-        // CLASSIC preserves the played root register. AUTO may move upper
-        // voices, but must not octave-jump the incoming MIDI root.
-        if (c[0]!=rootMidi) continue;
-        // Anchor center to the user's trigger octave.
         if (c[0]<rootMidi-12 || c[2]>rootMidi+24) continue;
+        if (settings.leading==Leading::Off && c[0]!=rootMidi) continue;
         const int spread=c[2]-c[0];
         const int reference= settings.character==Character::Wide?19:
                              settings.character==Character::Dark?7:12;
         const int diff=spread-reference;
-        int64_t score=static_cast<int64_t>(diff)*diff*4;
+        int64_t score=static_cast<int64_t>(diff)*diff*2;
         if (settings.character==Character::Dark) score+=(c[2]-rootMidi+12)*2;
         if (settings.leading==Leading::Auto && previous && previous->accepted && previous->count>=3) {
             for(int i=0;i<3;++i) {
                 const int movement=c[i]-static_cast<int>(previous->notes[i]);
-                score+=static_cast<int64_t>(movement)*movement*3;
+                score+=static_cast<int64_t>(movement)*movement*8;
             }
         } else {
             for(int i=0;i<3;++i) {
