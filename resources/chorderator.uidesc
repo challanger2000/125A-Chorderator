@@ -21,11 +21,11 @@
 </control-tags>
 <template name="ChorderatorView" class="CViewContainer" origin="0, 0" size="1120, 600" minSize="1120, 600" maxSize="1680, 900" background-color="Bg" transparent="false">
 <view class="CView" origin="26, 12" size="138, 69" bitmap="BrandLogo" transparent="true"/>
-<view class="CTextLabel" origin="182, 22" size="620, 38" title="125A CHORDERATOR" font="Title" font-color="Text" transparent="true"/>
+<view class="CTextLabel" origin="182, 22" size="620, 38" title="125A CHORDERATOR" text-alignment="center" font="Title" font-color="Text" transparent="true"/>
 <view class="CTextButton" control-tag="UiZoom" origin="926, 37" size="170, 36" title="100 %" text-color="Text" text-color-highlighted="Text" font="Normal" frame-color="Line" frame-color-highlighted="Accent" frame-width="1" round-radius="4" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="true"/>
-<view class="CTextLabel" origin="34, 65" size="720, 22" title="INTELLIGENT MIDI CHORD ENGINE" font="Small" font-color="Muted" transparent="true"/>
+<view class="CTextLabel" origin="34, 65" size="720, 22" title="INTELLIGENT MIDI CHORD ENGINE" text-alignment="center" font="Small" font-color="Muted" transparent="true"/>
 <view class="CViewContainer" origin="24, 110" size="520, 170" background-color="Panel" transparent="false">
-<view class="CTextLabel" origin="20, 14" size="480, 28" title="KEY &amp; SCALE" font="Heading" font-color="Accent" transparent="true"/>
+<view class="CTextLabel" origin="20, 14" size="480, 28" title="KEY &amp; SCALE" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
 <view class="CTextLabel" origin="20, 54" size="220, 20" title="KEY" font="Normal" font-color="Muted" transparent="true"/>
 <view class="COptionMenu" control-tag="Key" origin="20, 79" size="220, 33" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
 <view class="CTextLabel" origin="270, 54" size="220, 20" title="SCALE" font="Normal" font-color="Muted" transparent="true"/>
@@ -33,27 +33,27 @@
 <view class="CTextLabel" origin="20, 130" size="480, 20" chorderator-id="allowedNotes" title="Allowed notes: C D E F G A B" font="Small" font-color="Muted" transparent="true"/>
 </view>
 <view class="CViewContainer" origin="560, 110" size="536, 170" background-color="Panel" transparent="false">
-<view class="CTextLabel" origin="20, 14" size="500, 28" title="VOICING" font="Heading" font-color="Accent" transparent="true"/>
+<view class="CTextLabel" origin="20, 14" size="500, 28" title="VOICING" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
 <view class="CTextLabel" origin="20, 54" size="220, 20" title="VOICE LEADING" font="Normal" font-color="Muted" transparent="true"/>
 <view class="COptionMenu" control-tag="Leading" origin="20, 79" size="220, 33" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
 <view class="CTextLabel" origin="270, 54" size="240, 20" title="CHARACTER" font="Normal" font-color="Muted" transparent="true"/>
 <view class="COptionMenu" control-tag="Character" origin="270, 79" size="240, 33" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
 </view>
 <view class="CViewContainer" origin="24, 300" size="520, 145" background-color="Panel" transparent="false">
-<view class="CTextLabel" origin="20, 12" size="470, 25" title="PERFORMANCE" font="Heading" font-color="Accent" transparent="true"/>
+<view class="CTextLabel" origin="20, 12" size="470, 25" title="PERFORMANCE" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
 <view class="CTextLabel" origin="20, 53" size="285, 22" title="ROOT OCTAVE DOUBLE" font="Normal" font-color="Text" transparent="true"/>
-<view class="COptionMenu" control-tag="Double" origin="330, 47" size="160, 30" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
+<view class="CTextButton" control-tag="Double" origin="330, 47" size="160, 30" title="OFF" text-color="Text" text-color-highlighted="Text" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false" frame-color="Line" frame-width="1"/>
 <view class="CTextLabel" origin="20, 99" size="285, 22" title="CHROMATIC" font="Normal" font-color="Text" transparent="true"/>
-<view class="COptionMenu" control-tag="Chromatic" origin="330, 94" size="160, 30" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
+<view class="CTextButton" control-tag="Chromatic" origin="330, 94" size="160, 30" title="OFF" text-color="Text" text-color-highlighted="Text" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false" frame-color="Line" frame-width="1"/>
 </view>
 <view class="CViewContainer" origin="560, 300" size="536, 145" background-color="Panel" transparent="false">
-<view class="CTextLabel" origin="20, 12" size="490, 25" title="OPTIONAL MIDI CONTROL NOTES" font="Heading" font-color="Accent" transparent="true"/>
+<view class="CTextLabel" origin="20, 12" size="490, 25" title="OPTIONAL MIDI CONTROL NOTES" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
 <view class="CTextLabel" origin="20, 52" size="275, 22" title="START NOTE (MIDI)" font="Normal" font-color="Muted" transparent="true"/>
 <view class="COptionMenu" control-tag="ControlBase" origin="307, 45" size="200, 32" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
 <view class="CTextLabel" origin="20, 103" size="485, 22" title="Play with chord: 12 = NORMAL, 13 = SUS2, 14 = SUS4" font="Small" font-color="Text" transparent="true"/>
 </view>
 <view class="CViewContainer" origin="24, 464" size="1072, 110" background-color="Panel" transparent="false">
-<view class="CTextLabel" origin="20, 14" size="1032, 27" title="CURRENT CHORD / OUTPUT NOTES" font="Heading" font-color="Accent" transparent="true"/>
+<view class="CTextLabel" origin="20, 14" size="1032, 27" title="CURRENT CHORD / OUTPUT NOTES" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
 <view class="CTextLabel" origin="20, 52" size="1032, 25" chorderator-id="liveNotes" title="No active chord notes" font="Normal" font-color="Muted" transparent="true"/>
 </view>
 </template>
