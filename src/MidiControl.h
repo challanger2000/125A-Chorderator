@@ -22,7 +22,7 @@ struct Modifier {
     bool conflict = false;
 };
 struct ControlLayout {
-    int16_t basePitch = 24; // C0 in Studio One default middle-C=C3 convention
+    int16_t basePitch = 48; // User's Studio One octave convention: MIDI 48 is C0
     static constexpr int width = 5;
     constexpr bool valid() const noexcept {
         return basePitch >= 0 && basePitch + width <= 128;
