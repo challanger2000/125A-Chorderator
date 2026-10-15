@@ -247,18 +247,18 @@ int main() {
           "QA: AUTO must reduce aggregate upper-voice movement vs OFF");
     // Control NoteOns on the same sample apply regardless of host event order.
     ControlLayout layout;
-    check(layout.valid() && layout.isControl(50) && !layout.isControl(60), "valid controls");
+    check(layout.valid() && layout.isControl(26) && !layout.isControl(60), "valid controls");
     const std::array<InputEvent,3> firstOrder{{{12,60,true,false,11},
-                                                {12,52,true,false,12},
-                                                {13,52,false,true,12}}};
-    const std::array<InputEvent,3> reverseOrder{{{12,52,true,false,12},
+                                                {12,28,true,false,12},
+                                                {13,28,false,true,12}}};
+    const std::array<InputEvent,3> reverseOrder{{{12,28,true,false,12},
                                                   {12,60,true,false,11},
-                                                  {13,52,false,true,12}}};
+                                                  {13,28,false,true,12}}};
     check(modifierAt(firstOrder,3,12,layout).variant==Variant::Sus4, "sus4 selected");
     check(modifierAt(reverseOrder,3,12,layout).variant==Variant::Sus4, "order independent");
     check(modifierAt(firstOrder,3,13,layout).variant==Variant::Normal, "no held mode");
-    const std::array<InputEvent,2> conflicting{{{4,50,true,false,1},
-                                                 {4,52,true,false,2}}};
+    const std::array<InputEvent,2> conflicting{{{4,26,true,false,1},
+                                                 {4,28,true,false,2}}};
     const auto rejected=modifierAt(conflicting,2,4,layout);
     check(rejected.conflict && rejected.variant==Variant::Normal, "conflicting modifiers safe");
     layout.basePitch=127;
@@ -270,9 +270,9 @@ int main() {
     exact.leading=Leading::Off;
     proc.setVoicing(exact);
     std::array<InputEvent,4> batch{{{0,60,true,false,101},
-                                    {0,52,true,false,201},
+                                    {0,28,true,false,201},
                                     {48,60,false,true,101},
-                                    {48,52,false,true,201}}};
+                                    {48,28,false,true,201}}};
     check(proc.process(batch,4), "processor accepted event block");
     check(proc.outputCount()==6, "three NoteOn and three NoteOff");
     check(proc.output()[0].on && proc.output()[0].pitch==60, "root NoteOn");
@@ -291,7 +291,7 @@ int main() {
     // Muted control and invalid notes generate no MIDI.
     // Every reserved control key must be completely silent on NoteOn and
     // NoteOff, including while a musical chord is already sounding.
-    for(int pitch : {48,50,52}) {
+    for(int pitch : {24,26,28}) {
         MidiChordProcessor<> silent;
         silent.setVoicing(exact);
         std::array<InputEvent,2> pair{{{0,static_cast<int16_t>(pitch),true,false,9},
@@ -308,8 +308,48 @@ int main() {
         check(silent.process(release,1) && silent.outputCount()==3,
               "musical chord releases normally");
     }
-    std::array<InputEvent,1> onlyControl{{{0,48,true,false,9}}};
+    std::array<InputEvent,1> onlyControl{{{0,24,true,false,9}}};
     check(proc.process(onlyControl,1) && proc.outputCount()==0, "normal key is silent");
+    // Regression: Studio One's C0/D0/E0 labels map to MIDI 24/26/28.
+    // The incorrect 48/50/52 mapping used to mute C2/D2/E2.
+    Settings cMinor; cMinor.scale=Scale::NaturalMinor;
+    MidiChordProcessor<> octaveRepro;
+    octaveRepro.setSettings(cMinor);
+    octaveRepro.setVoicing(exact);
+    const std::array<InputEvent,1> c2Trigger{{{0,48,true,false,320}}};
+    check(octaveRepro.process(c2Trigger,1) &&
+          octaveRepro.outputCount()==3 &&
+          octaveRepro.output()[0].pitch==48 &&
+          octaveRepro.activeVoices()==1,
+          "C2 must generate a chord instead of acting as C0 control");
+    const std::array<InputEvent,1> c2Release{{{0,48,false,true,320}}};
+    check(octaveRepro.process(c2Release,1) &&
+          octaveRepro.activeVoices()==0,
+          "C2 chord releases normally");
+    const std::array<InputEvent,2> d0Modifier{{{0,26,true,false,400},
+                                                 {0,60,true,false,401}}};
+    check(octaveRepro.process(d0Modifier,2) &&
+          octaveRepro.outputCount()==3 &&
+          octaveRepro.activeVoices()==1 &&
+          octaveRepro.output()[0].pitch==60 &&
+          octaveRepro.output()[1].pitch==62 &&
+          octaveRepro.output()[2].pitch==67,
+          "D0 requests SUS2 without generating an overlapping chord");
+    int identifiedRoot=-1;
+    Quality identifiedQuality=Quality::Major;
+    check(octaveRepro.singleChord(identifiedRoot,identifiedQuality) &&
+          identifiedRoot==60 && identifiedQuality==Quality::Sus2,
+          "D0 leaves one correctly labeled chord active");
+    const std::array<InputEvent,1> laterD0{{{0,26,true,false,402}}};
+    check(octaveRepro.process(laterD0,1) &&
+          octaveRepro.outputCount()==0 &&
+          octaveRepro.activeVoices()==1 &&
+          octaveRepro.singleChord(identifiedRoot,identifiedQuality),
+          "later D0 stays silent and must not cause overlap readout");
+    const std::array<InputEvent,1> cNoteOff{{{0,60,false,true,401}}};
+    check(octaveRepro.process(cNoteOff,1) &&
+          octaveRepro.activeVoices()==0,
+          "SUS2 chord releases without hanging notes");
     // Hosts may send noteId=-1 for every note. Two overlapping C notes
     // must remain independently owned; first off cannot silence the second.
     MidiChordProcessor<> untagged;
@@ -390,9 +430,10 @@ int main() {
     check(named.process(aChord,1) &&
           named.singleChord(chordRoot,chordQuality) &&
           chordQuality==Quality::Power,"POWER identity is explicit");
-    check(studioOneOctaveFor(24)==-2 &&
-          studioOneOctaveFor(48)==0 &&
-          studioOneOctaveFor(60)==1,
-          "DAW octave notation follows verified MIDI 48 = C0");
+    check(studioOneOctaveFor(0)==-2 &&
+          studioOneOctaveFor(24)==0 &&
+          studioOneOctaveFor(48)==2 &&
+          studioOneOctaveFor(60)==3,
+          "DAW octave notation: MIDI 24=C0, MIDI 48=C2, MIDI 60=C3");
     std::cout << "ChordEngine tests PASS\n";
 }

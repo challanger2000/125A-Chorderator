@@ -21,10 +21,10 @@ struct Modifier {
     Variant variant = Variant::Normal;
     bool conflict = false;
 };
-// Octave labels follow the user's Studio One setup: MIDI 24=C-2, 48=C0.
-constexpr int studioOneOctaveFor(int pitch) noexcept { return pitch / 12 - 4; }
+// Studio One note labels: MIDI 0=C-2, 24=C0, 48=C2, 60=C3.
+constexpr int studioOneOctaveFor(int pitch) noexcept { return pitch / 12 - 2; }
 struct ControlLayout {
-    int16_t basePitch = 48; // User's Studio One octave convention: MIDI 48 is C0
+    int16_t basePitch = 24; // C0; D0=26 and E0=28 are modifier keys
     static constexpr int width = 5;
     constexpr bool valid() const noexcept {
         return basePitch >= 0 && basePitch + width <= 128;

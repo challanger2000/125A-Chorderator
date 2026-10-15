@@ -33,7 +33,7 @@ constexpr uint32_t kMagic=0x31444843u; // CHD1
 constexpr uint32_t kVersion=1;
 struct StoredState {
     uint32_t magic=kMagic, version=kVersion;
-    int32_t key=0, scale=0, chromatic=0, leading=1, character=0, doubled=0, controlBase=48;
+    int32_t key=0, scale=0, chromatic=0, leading=1, character=0, doubled=0, controlBase=24;
 };
 template<class T> bool ioWrite(IBStream* s,const T& v) {
     if (!s) return false;
@@ -118,7 +118,7 @@ class ChorderatorProcessor final : public AudioEffect {
         voicing.leading=static_cast<chorderator::Leading>(settings_.leading);
         voicing.character=static_cast<chorderator::Character>(settings_.character);
         core_.setVoicing(voicing);
-        core_.setControlLayout({48});
+        core_.setControlLayout({24});
     }
     void update(ParamID id,ParamValue v) {
         switch(id) {
@@ -423,8 +423,8 @@ public:
         // The modifier layout itself is fixed at 48/50/52 and must not
         // pretend to offer a user-adjustable (nonfunctional) parameter.
         controlBase->getInfo().flags=ParameterInfo::kIsReadOnly | ParameterInfo::kIsHidden;
-        controlBase->getInfo().defaultNormalizedValue=48.0/125.0;
-        controlBase->setNormalized(48.0/125.0);
+        controlBase->getInfo().defaultNormalizedValue=24.0/125.0;
+        controlBase->setNormalized(24.0/125.0);
         parameters.addParameter(controlBase);
         for(ParamID id=kLiveCount;id<=kLiveChordQuality;++id) {
             const int max=id==kLiveCount || id==kLiveChordRoot?128:

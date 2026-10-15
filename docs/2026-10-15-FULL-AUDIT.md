@@ -10,7 +10,7 @@
 | --- | --- | --- | --- |
 | Chord generation | TEST PASS (core) | 9 scales, variants, basic output pitch classes and MIDI bounds covered by ChordEngineTests.cpp | Independent reference tables, all 7 degrees in every scale |
 | Voice leading | TEST PASS (bounded metric) | Root bass preserved; 30,456-transition movement metric; no proof of all musical situations or repeated host seek behavior | Explicit golden note sequences, high-register and chromatic tests, reset/seek test |
-| C0/D0/E0 modifier control | TEST PASS (core); HOST NOT VERIFIED | Layout in MidiControl.h fixed at absolute MIDI 48/50/52; simultaneous same-sample NoteOn only | Native Studio One octave check and silence at both note-on and note-off |
+| C0/D0/E0 modifier control | TEST PASS (core); HOST NOT VERIFIED | CORRECTED: fixed Studio One C0/D0/E0 to absolute MIDI 24/26/28; previously 48/50/52 was incorrect; simultaneous same-sample NoteOn only | Native Studio One octave check and silence at both note-on and note-off |
 | Legacy modifier base parameter | CORRECTED IN SOURCE; BUILD PENDING | Param 106 was exposed as writable despite processor ignoring updates; now marked read-only/hidden and default 48. v1 stored-state field retained for compatibility. | Build, plugin validator, state recall and host parameter inspection |
 | MIDI event ingress | AT RISK | 256 total input-event cap (even irrelevant event types); negative offsets filtered but offset >= numSamples not rejected; notes sorted by offset; MIDI channel and velocity are not preserved | Event stress, channel/velocity requirement, input validation |
 | MIDI output/backpressure | **BLOCKER** | MidiChordProcessor mutates active/sounding state before ChordVst3::emit. If output IEventList::addEvent fails partway, no atomic rollback/retry. Subsequent NoteOff/NoteOn may desync from host. | Failure injection: reject output at event 0, 1, or later; recover without stuck/lost notes |
@@ -29,7 +29,7 @@
 - Windows core tests: PASS, run 38783476316, including output-recovery/timeline/chord-identity regressions.
 - Steinberg VST3 Validator: 47 PASS / 0 FAIL, Windows run 38783476620.
 - Windows development artifact produced by run 38783476620.
-- Subsequent source correction pending: note-name display now follows Studio One MIDI 48 = C0, plus regression cases MIDI 24 = C-2, 60 = C1.
+- Subsequent source correction pending: note-name display now follows Studio One MIDI 24 = C0, with regression cases MIDI 0 = C-2, MIDI 48 = C2 and 60 = C3.
 - **Still NOT YET VERIFIED:** actual Studio One editor clicks/automation/transport and 125A Plugin Tester results for this repair build; neither core PASS nor validator PASS is a FULL-AUDIT or FINAL release pass.
 
 ## Verified final CI evidence for this repair phase (2026-10-15)
@@ -39,5 +39,11 @@
 - Core regression run: https://github.com/challanger2000/125A-Chorderator/actions/runs/38784146250 — **PASS**.
 - Windows VST3 build and Steinberg validator: https://github.com/challanger2000/125A-Chorderator/actions/runs/38784146224 — **PASS, validator 47 passed / 0 failed**.
 - Windows development VST3 artifact is present in run 38784146224.
-- In addition to the three repair areas, displayed note octaves now honor the observed Studio One convention: MIDI 24 = C-2, 48 = C0, 60 = C1; the core suite asserts this mapping.
+- In addition to the three repair areas, displayed note octaves now honor the observed Studio One convention: MIDI 0 = C-2, 24 = C0, 48 = C2, 60 = C3; the core suite asserts this mapping.
 - **NOT VERIFIED / release blocking:** actual DAW editor mouse/zoom/automation/restore and transport observations; 125A Plugin Tester v0.2.10 run on this exact development binary; real-host partial event rejection and dense automation fixtures. No FULL QA / FINAL designation is authorized by this report.
+
+## 2026-10-15 Studio One octave / modifier hotfix (PENDING CI)
+
+The previous OCTAVE mapping was incorrect. Studio One convention is MIDI note 60 = C3, so C0 = 24, D0 = 26, E0 = 28. The development processor incorrectly reserved pitches 48/50/52 (C2/D2/E2), which accounts for the user's report that Eb2 (D#2) was the first audible C-natural-minor scale note in that range: C2 was swallowed, C#2 out of scale, D2 swallowed, Eb2 allowed. The user's D0 was not consumed and created a second audible chord, causing the overlap indicator.
+
+Changes pending CI: MidiControl fixed basePitch 24; VST3 processor applies 24; preserved legacy controlBase field has neutral initial value 24; Studio One octave GUI display updated from pitch/12-4 to pitch/12-2. Regression tests assert all control keys are silent, C2 is melodic, D0+chord requests SUS2 with exactly one held chord, and later D0 cannot cause overlap. Host integration not yet verified. Existing state v1 schema and parameter IDs retained.
