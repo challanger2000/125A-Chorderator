@@ -418,8 +418,12 @@ public:
             Steinberg::UString(text,128).fromAscii(label.c_str());
             controlBase->appendString(text);
         }
-        controlBase->getInfo().defaultNormalizedValue=0.0/125.0;
-        controlBase->setNormalized(12.0/125.0);
+        // Legacy state field is retained for backward-compatible preset recall.
+        // The modifier layout itself is fixed at 48/50/52 and must not
+        // pretend to offer a user-adjustable (nonfunctional) parameter.
+        controlBase->getInfo().flags=ParameterInfo::kIsReadOnly | ParameterInfo::kIsHidden;
+        controlBase->getInfo().defaultNormalizedValue=48.0/125.0;
+        controlBase->setNormalized(48.0/125.0);
         parameters.addParameter(controlBase);
         for(ParamID id=kLiveCount;id<=kLivePitch4;++id) {
             auto* p=new RangeParameter(STR16("Live MIDI"),id,nullptr,0.,
