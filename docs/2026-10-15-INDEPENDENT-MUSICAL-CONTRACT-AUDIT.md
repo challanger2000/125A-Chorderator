@@ -83,3 +83,20 @@ The original FAIL evidence above is preserved, not erased.
 - Musical taste, harmonic suitability and expressive feel remain a human listening judgment; CI demonstrates conformity to the defined contract, not universal sonic quality.
 
 **Status: Musical regression / build / official VST3 validator PASS. Release gate: OPEN / NO FINAL.**
+
+## True chord inversion redesign — 2026-10-15 (QA in progress)
+
+**Source commit** `293953ab6f455529408b3e43307c82dd2b4f37f8`.
+
+The previous design called its raised upper voices "inversions" while forcing the played harmonic root to remain the bass. It produced different chord *voicings*, not true triad inversions.
+
+**Corrected contract:** The played single MIDI note selects the harmonic root. VOICE LEADING OFF retains its fixed CHARACTER root-bass arrangement. VOICE LEADING AUTO may use the third or fifth as actual bass; a fixed-capacity 48-candidate, allocation-free search minimizes the movement of all three voices against the preceding chord while keeping the voicing near the played register. Chord.quality and independent Chord.harmonicRoot preserve the harmonic identity despite bass movement. POWER remains a separate root/fifth/octave sound without a harmonic third. Note ownership, root+12 doubling, retained input velocity and repeated-note cache are preserved.
+
+**Independent golden MIDI example:** single triggers C3 (MIDI 60), F3 (65), G3 (67) produce C3-E3-G3 (60/64/67), C3-F3-A3 (60/65/69: F/C), D3-G3-B3 (62/67/71: G/D). Returning to C3 reproduces 60/64/67.
+
+- [Independent musical contract run **PASS**](https://github.com/challanger2000/125A-Chorderator/actions/runs/38815267816): first inversions observed 1,512, second inversions 3,888 in the test corpus; the repeated short-octave phrase shows 0 mismatches.
+- [Core QA run **PASS**](https://github.com/challanger2000/125A-Chorderator/actions/runs/38815267764): 30,456 transitions; all-voice movement AUTO 120,384 vs OFF 421,200; 23,904 better individual transitions and 0 worse in this synthetic corpus.
+- Windows VST3 build and Steinberg Validator: pending at time of this audit note.
+- Native Studio One routed MIDI, 125A Plugin Tester v0.2.10 and subjective musical review remain **NOT VERIFIED**; no FINAL release authorization.
+
+**Persistent design constraint:** Input MIDI root is a harmonic label only in AUTO, not a guarantee about the lowest emitted MIDI note. Regression tests must explicitly assert different bass pitch classes, not merely different octave placements of upper voices.
