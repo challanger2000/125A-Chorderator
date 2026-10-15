@@ -209,13 +209,33 @@ public:
     tresult PLUGIN_API initialize(FUnknown* context) SMTG_OVERRIDE {
         auto r=EditControllerEx1::initialize(context);
         if(r!=kResultOk) return r;
-        parameters.addParameter(STR16("Key"),nullptr,11,0,ParameterInfo::kCanAutomate,kKey);
-        parameters.addParameter(STR16("Scale"),nullptr,3,0,ParameterInfo::kCanAutomate,kScale);
-        parameters.addParameter(STR16("Chromatic"),nullptr,1,0,ParameterInfo::kCanAutomate,kChromatic);
-        parameters.addParameter(STR16("Voice Leading"),nullptr,1,1,ParameterInfo::kCanAutomate,kVoiceLeading);
-        parameters.addParameter(STR16("Character"),nullptr,3,0,ParameterInfo::kCanAutomate,kCharacter);
-        parameters.addParameter(STR16("Root Double"),nullptr,1,0,ParameterInfo::kCanAutomate,kRootDouble);
-        parameters.addParameter(STR16("Control Base"),nullptr,125,12.0/125.0,ParameterInfo::kCanAutomate,kControlBase);
+        auto* key=new StringListParameter(STR16("Key"),kKey);
+        const char16_t* keys[]={STR16("C"),STR16("C#"),STR16("D"),STR16("Eb"),
+          STR16("E"),STR16("F"),STR16("F#"),STR16("G"),STR16("Ab"),
+          STR16("A"),STR16("Bb"),STR16("B")};
+        for(auto* n:keys) key->appendString(n);
+        parameters.addParameter(key);
+        auto* scale=new StringListParameter(STR16("Scale"),kScale);
+        for(auto* n:{STR16("Major"),STR16("Natural Minor"),
+                     STR16("Harmonic Minor"),STR16("Melodic Minor")})
+            scale->appendString(n);
+        parameters.addParameter(scale);
+        auto* chromatic=new StringListParameter(STR16("Chromatic"),kChromatic);
+        chromatic->appendString(STR16("OFF"));chromatic->appendString(STR16("ON"));
+        parameters.addParameter(chromatic);
+        auto* leading=new StringListParameter(STR16("Voice Leading"),kVoiceLeading);
+        leading->appendString(STR16("OFF"));leading->appendString(STR16("AUTO"));
+        leading->getInfo().defaultNormalizedValue=1.0;leading->setNormalized(1.0);
+        parameters.addParameter(leading);
+        auto* character=new StringListParameter(STR16("Character"),kCharacter);
+        for(auto* n:{STR16("CLASSIC"),STR16("DARK"),STR16("WIDE"),STR16("POWER")})
+            character->appendString(n);
+        parameters.addParameter(character);
+        auto* doubled=new StringListParameter(STR16("Root Double"),kRootDouble);
+        doubled->appendString(STR16("OFF"));doubled->appendString(STR16("ON"));
+        parameters.addParameter(doubled);
+        parameters.addParameter(STR16("Control Base"),nullptr,125,12.0/125.0,
+                                ParameterInfo::kCanAutomate,kControlBase);
         return kResultOk;
     }
     IPlugView* PLUGIN_API createView(FIDString name) SMTG_OVERRIDE {
