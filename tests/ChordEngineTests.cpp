@@ -163,8 +163,27 @@ int main() {
     check(proc.process(releaseLast,1) && proc.outputCount()==3, "last release emits offs");
     check(proc.stop() && proc.outputCount()==0, "panic after silence");
     // Muted control and invalid notes generate no MIDI.
-    std::array<InputEvent,1> onlyControl{{{0,13,true,false,9}}};
-    check(proc.process(onlyControl,1) && proc.outputCount()==0, "control note is silent");
+    // Every reserved control key must be completely silent on NoteOn and
+    // NoteOff, including while a musical chord is already sounding.
+    for(int pitch : {0,2,4}) {
+        MidiChordProcessor<> silent;
+        silent.setVoicing(exact);
+        std::array<InputEvent,2> pair{{{0,static_cast<int16_t>(pitch),true,false,9},
+                                       {24,static_cast<int16_t>(pitch),false,true,9}}};
+        check(silent.process(pair,2) && silent.outputCount()==0,
+              "C/D/E modifier never emits MIDI NoteOn or NoteOff");
+        check(silent.activeVoices()==0, "control note never owns a voice");
+        std::array<InputEvent,1> musical{{{0,60,true,false,10}}};
+        check(silent.process(musical,1) && silent.outputCount()==3,
+              "musical chord still sounds after control");
+        check(silent.process(pair,2) && silent.outputCount()==0,
+              "control notes never interrupt playing chord");
+        std::array<InputEvent,1> release{{{0,60,false,true,10}}};
+        check(silent.process(release,1) && silent.outputCount()==3,
+              "musical chord releases normally");
+    }
+    std::array<InputEvent,1> onlyControl{{{0,0,true,false,9}}};
+    check(proc.process(onlyControl,1) && proc.outputCount()==0, "normal key is silent");
     // Hosts may send noteId=-1 for every note. Two overlapping C notes
     // must remain independently owned; first off cannot silence the second.
     MidiChordProcessor<> untagged;
