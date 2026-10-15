@@ -23,7 +23,7 @@
 <view class="COptionMenu" control-tag="Key" origin="20, 79" size="220, 33" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
 <view class="CTextLabel" origin="270, 54" size="220, 20" title="SCALE" font="Normal" font-color="Muted" transparent="true"/>
 <view class="COptionMenu" control-tag="Scale" origin="270, 79" size="220, 33" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
-<view class="CTextLabel" origin="20, 130" size="480, 20" title="Allowed notes: refer to KEY / SCALE (live display pending)" font="Small" font-color="Muted" transparent="true"/>
+<view class="CTextLabel" origin="20, 130" size="480, 20" chorderator-id="allowedNotes" title="Allowed notes: C D E F G A B" font="Small" font-color="Muted" transparent="true"/>
 </view>
 <view class="CViewContainer" origin="560, 110" size="536, 170" background-color="Panel" transparent="false">
 <view class="CTextLabel" origin="20, 14" size="500, 28" title="VOICING" font="Heading" font-color="Accent" transparent="true"/>
