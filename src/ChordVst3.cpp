@@ -245,14 +245,66 @@ class ChorderatorController final : public EditControllerEx1,
         if(!liveNotes_) return;
         static constexpr const char* names[]={"C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"};
         const int count=quantized(getParamNormalized(kLiveCount),129);
-        std::string label=count==0?"No active chord notes":"Active MIDI notes: ";
-        for(int i=0;i<std::min(count,4);++i) {
-            if(i) label+="  ";
-            const auto n=quantized(getParamNormalized(kLivePitch1+static_cast<ParamID>(i)),128);
-            label+=names[n%12]; label+=std::to_string(n/12); label+=" ("+std::to_string(n)+")";
+        if(count==0) {
+            liveNotes_->setText("No active chord");
+            liveNotes_->invalid();
+            return;
         }
-        if(count>4) label+="  +"+std::to_string(count-4)+" more";
-        liveNotes_->setText(label.c_str());liveNotes_->invalid();
+        std::array<int,4> pitches{};
+        const int shown=std::min(count,4);
+        std::string detail="Notes: ";
+        for(int i=0;i<shown;++i) {
+            const int n=quantized(getParamNormalized(kLivePitch1+static_cast<ParamID>(i)),128);
+            pitches[static_cast<size_t>(i)]=n;
+            if(i) detail+="  ";
+            detail+=names[n%12];
+            detail+=std::to_string(n/12);
+        }
+        if(count>4) detail+="  +"+std::to_string(count-4)+" more";
+        // The generator keeps the incoming trigger root as its lowest note.
+        // Only identify the chord when the COMPLETE audible pitch set fits
+        // a supported triad/suspension/power chord; never guess on overlaps.
+        std::string chordName;
+        if(count>=2 && count<=4) {
+            const int root=pitches[0];
+            bool hasThirdMinor=false,hasThirdMajor=false,hasSus2=false,hasSus4=false;
+            bool hasFifth=false,hasDimFifth=false,hasAugFifth=false;
+            bool unknown=false;
+            for(int i=1;i<count;++i) {
+                const int interval=(pitches[static_cast<size_t>(i)]-root)%12;
+                switch(interval) {
+                    case 0: break; // octave doubling
+                    case 2: hasSus2=true;break;
+                    case 3: hasThirdMinor=true;break;
+                    case 4: hasThirdMajor=true;break;
+                    case 5: hasSus4=true;break;
+                    case 6: hasDimFifth=true;break;
+                    case 7: hasFifth=true;break;
+                    case 8: hasAugFifth=true;break;
+                    default:unknown=true;break;
+                }
+            }
+            const int thirdCount=static_cast<int>(hasThirdMinor)+static_cast<int>(hasThirdMajor)+
+                                 static_cast<int>(hasSus2)+static_cast<int>(hasSus4);
+            const int fifthCount=static_cast<int>(hasFifth)+static_cast<int>(hasDimFifth)+
+                                 static_cast<int>(hasAugFifth);
+            if(!unknown && fifthCount==1) {
+                std::string suffix;
+                if(thirdCount==0 && hasFifth) suffix="5";
+                else if(thirdCount==1 && hasFifth && hasThirdMajor) suffix="";
+                else if(thirdCount==1 && hasFifth && hasThirdMinor) suffix="m";
+                else if(thirdCount==1 && hasDimFifth && hasThirdMinor) suffix="dim";
+                else if(thirdCount==1 && hasAugFifth && hasThirdMajor) suffix="aug";
+                else if(thirdCount==1 && hasFifth && hasSus2) suffix="sus2";
+                else if(thirdCount==1 && hasFifth && hasSus4) suffix="sus4";
+                else suffix="?";
+                if(suffix!="?") chordName=std::string(names[root%12])+suffix;
+            }
+        }
+        std::string label=chordName.empty()?"CHORD: --    |    "+detail:
+                                              "CHORD: "+chordName+"    |    "+detail;
+        liveNotes_->setText(label.c_str());
+        liveNotes_->invalid();
     }
     VSTGUI::CTextButton* chromaticButton_=nullptr;
     VSTGUI::CTextButton* doubleButton_=nullptr;
