@@ -70,3 +70,14 @@ Code commit: `226b95378494e14d089cb466dabbf123e71b2e0a`.
 - Deterministic core regression: 6 repeats of the 8-note rising Natural Minor progression with 3 CHARACTER modes x ROOT OCTAVE DOUBLE OFF/ON. Every full four-/three-note chord must be identical at the same passage position across repeats. Independent regression verifies a root+12 octave that lies below the upper voices.
 
 **Status:** implementation/test committed only after review; CI PASS, validator and native Studio One review not yet evidenced.
+
+## Repeated ascending-phrase voice-leading fix — verified CI (2026-10-15)
+
+**Source commit:** `faa1ac9a392d3952d6f1c2573a37a0c1425d5e4d`.
+
+- Core tests: **PASS**; https://github.com/challanger2000/125A-Chorderator/actions/runs/38806057995
+- Windows VST3 build: **PASS**; Steinberg Validator **47 tests passed / 0 tests failed**; https://github.com/challanger2000/125A-Chorderator/actions/runs/38806057823
+- Windows x64 DEVELOPMENT VST3 ZIP confirmed in build run artifacts.
+- Core regression enforces six complete repetitions of C2–D2–Eb2–F2–G2–Ab2–Bb2–C3 with identical **full** chord notes at matching steps, across AUTO with CLASSIC / DARK / WIDE and ROOT OCTAVE DOUBLE OFF/ON.
+- ROOT OCTAVE DOUBLE output adds exactly root+12; if root+12 already sounds in POWER voicing, no duplicate note is emitted.
+- **Not yet verified:** source build running in real Studio One MIDI routing with Pneuma Pro; 125A Plugin Tester / all native-host release gates. The development ZIP is **not** FINAL.
