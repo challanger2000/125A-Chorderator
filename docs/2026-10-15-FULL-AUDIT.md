@@ -47,3 +47,11 @@
 The previous OCTAVE mapping was incorrect. Studio One convention is MIDI note 60 = C3, so C0 = 24, D0 = 26, E0 = 28. The development processor incorrectly reserved pitches 48/50/52 (C2/D2/E2), which accounts for the user's report that Eb2 (D#2) was the first audible C-natural-minor scale note in that range: C2 was swallowed, C#2 out of scale, D2 swallowed, Eb2 allowed. The user's D0 was not consumed and created a second audible chord, causing the overlap indicator.
 
 Changes pending CI: MidiControl fixed basePitch 24; VST3 processor applies 24; preserved legacy controlBase field has neutral initial value 24; Studio One octave GUI display updated from pitch/12-4 to pitch/12-2. Regression tests assert all control keys are silent, C2 is melodic, D0+chord requests SUS2 with exactly one held chord, and later D0 cannot cause overlap. Host integration not yet verified. Existing state v1 schema and parameter IDs retained.
+
+## Studio One octave/modifier hotfix — verified CI
+
+Code commit: `226b95378494e14d089cb466dabbf123e71b2e0a`.
+
+- Core suite: **PASS**, including C2 no-longer-reserved and D0+chord no-overlap regressions; https://github.com/challanger2000/125A-Chorderator/actions/runs/38787579732
+- Windows VST3 build and official Steinberg Validator: **PASS, 47 passed / 0 failed**; development ZIP available in https://github.com/challanger2000/125A-Chorderator/actions/runs/38787579299
+- Host-local demonstration of these exact notes in Studio One is still pending. This is not a FULL QA / release authorization.
