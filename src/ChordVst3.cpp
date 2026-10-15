@@ -254,6 +254,18 @@ class ChorderatorController final : public EditControllerEx1,
         if(count>4) label+="  +"+std::to_string(count-4)+" more";
         liveNotes_->setText(label.c_str());liveNotes_->invalid();
     }
+    VSTGUI::CTextButton* chromaticButton_=nullptr;
+    VSTGUI::CTextButton* doubleButton_=nullptr;
+    void refreshToggles() {
+        if(chromaticButton_) {
+            chromaticButton_->setTitle(getParamNormalized(kChromatic)>=0.5 ? "ON" : "OFF");
+            chromaticButton_->invalid();
+        }
+        if(doubleButton_) {
+            doubleButton_->setTitle(getParamNormalized(kRootDouble)>=0.5 ? "ON" : "OFF");
+            doubleButton_->invalid();
+        }
+    }
     VSTGUI::CTextButton* zoomButton_=nullptr;
     VSTGUI::VST3Editor* activeEditor_=nullptr;
     double zoom_=1.0;
@@ -293,21 +305,24 @@ public:
         if(id && *id=="allowedNotes") allowedNotes_=dynamic_cast<VSTGUI::CTextLabel*>(view);
         if(id && *id=="liveNotes") liveNotes_=dynamic_cast<VSTGUI::CTextLabel*>(view);
         if(auto* control=dynamic_cast<VSTGUI::CControl*>(view)) {
+            if(control->getTag()==102) chromaticButton_=dynamic_cast<VSTGUI::CTextButton*>(control);
+            if(control->getTag()==105) doubleButton_=dynamic_cast<VSTGUI::CTextButton*>(control);
             if(control->getTag()==900) {
                 zoomButton_=dynamic_cast<VSTGUI::CTextButton*>(control);
                 control->setListener(this);
                 updateZoomText();
             }
         }
-        refreshScaleNotes();refreshLiveNotes();
+        refreshScaleNotes();refreshLiveNotes();refreshToggles();
         return view;
     }
     void willClose(VSTGUI::VST3Editor*) SMTG_OVERRIDE {
-        allowedNotes_=nullptr;liveNotes_=nullptr;zoomButton_=nullptr;activeEditor_=nullptr;
+        allowedNotes_=nullptr;liveNotes_=nullptr;zoomButton_=nullptr;chromaticButton_=nullptr;doubleButton_=nullptr;activeEditor_=nullptr;
     }
     tresult PLUGIN_API setParamNormalized(ParamID id,ParamValue value) SMTG_OVERRIDE {
         const auto result=EditControllerEx1::setParamNormalized(id,value);
         if(id==kKey || id==kScale) refreshScaleNotes();
+        if(id==kChromatic || id==kRootDouble) refreshToggles();
         if(id>=kLiveCount && id<=kLivePitch4) refreshLiveNotes();
         return result;
     }
