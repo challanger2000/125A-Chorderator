@@ -50,7 +50,7 @@
 <view class="CTextLabel" origin="20, 12" size="490, 25" title="CHORD MODIFIERS - LOWEST MIDI OCTAVE" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
 <view class="CTextLabel" origin="20, 51" size="490, 22" title="Add a control note at the same start as the chord" font="Normal" font-color="Muted" transparent="true"/>
 
-<view class="CTextLabel" origin="20, 103" size="485, 22" title="MIDI 0 = NORMAL     MIDI 1 = SUS2     MIDI 2 = SUS4" font="Small" font-color="Text" transparent="true"/>
+<view class="CTextLabel" origin="20, 103" size="485, 22" title="C (MIDI 0) = NORMAL     D (2) = SUS2     E (4) = SUS4" font="Small" font-color="Text" transparent="true"/>
 </view>
 <view class="CViewContainer" origin="24, 464" size="1072, 110" background-color="Panel" transparent="false">
 <view class="CTextLabel" origin="20, 14" size="1032, 27" title="CURRENT CHORD / OUTPUT NOTES" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
