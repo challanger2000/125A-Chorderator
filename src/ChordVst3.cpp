@@ -45,7 +45,7 @@ template<class T> bool ioRead(IBStream* s,T& v) {
 }
 bool stateValid(const StoredState& v) {
     return v.magic==kMagic && v.version==kVersion &&
-        v.key>=0 && v.key<12 && v.scale>=0 && v.scale<4 &&
+        v.key>=0 && v.key<12 && v.scale>=0 && v.scale<9 &&
         v.chromatic>=0 && v.chromatic<=1 && v.leading>=0 && v.leading<=1 &&
         v.character>=0 && v.character<4 && v.doubled>=0 && v.doubled<=1 &&
         v.controlBase>=0 && v.controlBase<=125;
@@ -108,7 +108,7 @@ class ChorderatorProcessor final : public AudioEffect {
     void update(ParamID id,ParamValue v) {
         switch(id) {
         case kKey: settings_.key=quantized(v,12);break;
-        case kScale: settings_.scale=quantized(v,4);break;
+        case kScale: settings_.scale=quantized(v,9);break;
         case kChromatic: settings_.chromatic=quantized(v,2);break;
         case kVoiceLeading: settings_.leading=quantized(v,2);break;
         case kCharacter: settings_.character=quantized(v,4);break;
@@ -272,7 +272,7 @@ class ChorderatorController final : public EditControllerEx1,
         if(!allowedNotes_) return;
         static constexpr const char* names[]={"C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"};
         const int tonic=quantized(getParamNormalized(kKey),12);
-        const auto scale=static_cast<chorderator::Scale>(quantized(getParamNormalized(kScale),4));
+        const auto scale=static_cast<chorderator::Scale>(quantized(getParamNormalized(kScale),9));
         const auto degrees=chorderator::intervals(scale);
         std::string value="Allowed notes: ";
         for(size_t i=0;i<degrees.size();++i) {
@@ -323,7 +323,9 @@ public:
         parameters.addParameter(key);
         auto* scale=new StringListParameter(STR16("Scale"),kScale);
         for(auto* n:{STR16("Major"),STR16("Natural Minor"),
-                     STR16("Harmonic Minor"),STR16("Melodic Minor")})
+                     STR16("Harmonic Minor"),STR16("Melodic Minor"),
+                     STR16("Dorian"),STR16("Phrygian"),STR16("Lydian"),
+                     STR16("Mixolydian"),STR16("Locrian")})
             scale->appendString(n);
         parameters.addParameter(scale);
         auto* chromatic=new StringListParameter(STR16("Chromatic"),kChromatic);
@@ -373,7 +375,7 @@ public:
         StoredState state{};
         if(!readState(stream,state)) return kResultFalse;
         setParamNormalized(kKey,state.key/11.0);
-        setParamNormalized(kScale,state.scale/3.0);
+        setParamNormalized(kScale,state.scale/8.0);
         setParamNormalized(kChromatic,state.chromatic);
         setParamNormalized(kVoiceLeading,state.leading);
         setParamNormalized(kCharacter,state.character/3.0);
