@@ -113,5 +113,21 @@ int main() {
     // Muted control and invalid notes generate no MIDI.
     std::array<InputEvent,1> onlyControl{{{0,13,true,false,9}}};
     check(proc.process(onlyControl,1) && proc.outputCount()==0, "control note is silent");
+    // Hosts may send noteId=-1 for every note. Two overlapping C notes
+    // must remain independently owned; first off cannot silence the second.
+    MidiChordProcessor<> untagged;
+    untagged.setVoicing(exact);
+    const std::array<InputEvent,2> repeatedUntaged{{{0,60,true,false,-1},
+                                                     {8,60,true,false,-1}}};
+    check(untagged.process(repeatedUntaged,2), "untagged overlapping accepted");
+    check(untagged.activeVoices()==2, "untagged voice ownership");
+    check(untagged.outputCount()==3, "only first note triggers common pitches");
+    const std::array<InputEvent,1> untaggedOff{{{0,60,false,true,-1}}};
+    check(untagged.process(untaggedOff,1), "untagged first release accepted");
+    check(untagged.activeVoices()==1 && untagged.outputCount()==0,
+          "first untagged off keeps second sounding");
+    check(untagged.process(untaggedOff,1), "untagged final release accepted");
+    check(untagged.activeVoices()==0 && untagged.outputCount()==3,
+          "last untagged release emits all note offs");
     std::cout << "ChordEngine tests PASS\n";
 }
