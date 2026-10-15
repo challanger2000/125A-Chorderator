@@ -338,7 +338,7 @@ public:
         auto* controlBase=new StringListParameter(STR16("Modifier MIDI Base"),kControlBase);
         for(int n=0;n<=125;++n) {
             const auto label=std::to_string(n);
-            Steinberg::String128 text{};
+            Steinberg::Vst::String128 text{};
             Steinberg::UString(text,128).fromAscii(label.c_str());
             controlBase->appendString(text);
         }
