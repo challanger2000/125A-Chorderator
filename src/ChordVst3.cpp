@@ -373,7 +373,7 @@ public:
 BEGIN_FACTORY_DEF("125A Audio Software", "https://github.com/challanger2000", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(Steinberg::Vst::kProcessorId),
            PClassInfo::kManyInstances, kVstAudioEffectClass, "125A CHORDERATOR",
-           Vst::kDistributable, "Fx|Generator", "1.0.0",
+           Vst::kDistributable, Vst::PlugType::kInstrumentSynth, "1.0.0",
            kVstVersionString, Steinberg::Vst::ChorderatorProcessor::create)
 DEF_CLASS2(INLINE_UID_FROM_FUID(Steinberg::Vst::kControllerId),
            PClassInfo::kManyInstances, kVstComponentControllerClass, "125A CHORDERATOR Controller",
