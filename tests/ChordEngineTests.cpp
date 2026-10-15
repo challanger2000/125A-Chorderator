@@ -180,13 +180,19 @@ int main() {
                   autoChord.notes[2]<=127 &&
                   autoChord.notes[2]-root<=23,
                   "QA: ordered, bounded MIDI register");
-            for(int n=1;n<3;++n) {
-                bool matches=false;
-                for(int src=0;src<3;++src)
-                    if(mod12(static_cast<int>(autoChord.notes[n])-
-                             static_cast<int>(generated.notes[src]))==0)
-                        matches=true;
-                check(matches,"QA: upper voice must retain chord pitch class");
+            if(character==Character::Power) {
+                check(autoChord.notes[0]==root && autoChord.notes[1]==root+7 &&
+                      autoChord.notes[2]==root+12,
+                      "QA: POWER deliberately uses root/fifth/octave");
+            } else {
+                for(int n=1;n<3;++n) {
+                    bool matches=false;
+                    for(int src=0;src<3;++src)
+                        if(mod12(static_cast<int>(autoChord.notes[n])-
+                                 static_cast<int>(generated.notes[src]))==0)
+                            matches=true;
+                    check(matches,"QA: upper voice must retain chord pitch class");
+                }
             }
             const Chord exactRepeat=voice(generated,root,musical,&autoChord);
             check(exactRepeat.notes==autoChord.notes,
