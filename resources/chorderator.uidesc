@@ -50,7 +50,7 @@
 </view>
 <view class="CViewContainer" origin="24, 464" size="1072, 110" background-color="Panel" transparent="false">
 <view class="CTextLabel" origin="20, 14" size="1032, 27" title="CURRENT CHORD / OUTPUT NOTES" font="Heading" font-color="Accent" transparent="true"/>
-<view class="CTextLabel" origin="20, 52" size="1032, 25" title="Live MIDI readout will be enabled after processor-controller messaging verification." font="Normal" font-color="Muted" transparent="true"/>
+<view class="CTextLabel" origin="20, 52" size="1032, 25" chorderator-id="liveNotes" title="No active chord notes" font="Normal" font-color="Muted" transparent="true"/>
 </view>
 </template>
 </vstgui-ui-description>
