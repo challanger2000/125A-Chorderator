@@ -1,7 +1,7 @@
 # 125A CHORDERATOR — Independent musical contract audit
 Date: 2026-10-15
 Scope: develop/v1.0.0; **no musical-engine changes during this audit**.
-Result: **MUSICAL CONTRACT FAIL**. No FINAL / commercial release authorization.
+Result at initial audit date: **HISTORICAL MUSICAL CONTRACT FAIL**. Resolved in later CI-confirmed candidate `fc5f4fe`; see resolution section below. **Native Studio One / 125A Tester remain NOT VERIFIED, so no FINAL / release authorization.**
 
 ## Evidence and reproducibility
 
@@ -55,3 +55,31 @@ Result: **MUSICAL CONTRACT FAIL**. No FINAL / commercial release authorization.
 6. Run independent contract audit plus existing core suite, Windows VST3 build, official validator and 125A Tester, then perform actual routed Studio One piano-roll comparison/loop/recall.
 
 Status: **FAIL — audited, not repaired or approved**.
+
+## Follow-up resolution — 2026-10-15 musical repair candidate (CONFIRMED)
+
+**Code commit:** `fc5f4fe867c6bf0f3b24ad01e64e5cc1444af39e` on `develop/v1.0.0`.
+The original FAIL evidence above is preserved, not erased.
+
+| Original audit finding | Resolution | Confirming test |
+| --- | --- | --- |
+| AUTO upper voices drift when short motifs repeat | Note-addressed bounded memory indexed by absolute MIDI root and chord modifier; no arbitrary 12-semitone phrase detector. Changes to musical settings and processor STOP reset voice memory. The first encountered voicing is preserved through uninterrupted repeats. | Independent musical audit 38812386016 PASS; original long-loop regression in core 38812386017 PASS |
+| DARK and WIDE indistinguishable from CLASSIC | OFF profiles defined as CLASSIC [root, third, fifth], DARK [root, fifth, third+12], WIDE [root, third+12, fifth+12]. AUTO balances previous voice movement against each reference profile. POWER [root, +7, +12]. | 756/756 DIFFERENT DARK vs CLASSIC and 756/756 DIFFERENT WIDE vs CLASSIC in OFF and AUTO fixture set |
+| MIDI velocity fixed 100 | InputEvent carries velocity, VST3 reads normalized host velocity and maps to MIDI 1–127, every chord NoteOn inherits input. Cached voicings do not cache the dynamic. | Independent & core tests check 1,19,37,109,127; PASS |
+| Suspensions with altered fifth named merely sus2/sus4 | Added explicit Quality identities and GUI suffixes for sus2(b5), sus2(#5), sus4(b5), sus4(#5) retaining actual original fifth. | Independent golden tests (C Locrian, harmonic minor) PASS |
+| CHROMATIC OFF contains SUS and POWER exceptions | Clarified user-facing label CHROMATIC ROOTS and allowed root notes. OFF limits trigger roots, not output pitch classes. POWER keeps a perfect fifth even in Locrian. | 396/1512 SUS out-of-scale and 156/756 POWER fifth exceptions are measured and documented |
+| Shared repeated pitch does not re-articulate | **INTENTIONAL LEGATO POLICY**, not changed. Overlapping note owners share a playing pitch until final NoteOff; source re-articulation is intentionally not guaranteed. | Original lifecycle tests; product contract describes limitation |
+| Control held key requires same-sample onset | **DELIBERATE V1 CONTRACT**: controls only apply when the control NoteOn and musical NoteOn have identical sample offset. | Original same-offset regression tests |
+| Optional seventh/add9 and adjustable control base missing | Deferred from early unapproved DRAFT; not represented as current product functions. | Implementation contract |
+
+### Actual verified CI for this code
+- [Core tests: PASS](https://github.com/challanger2000/125A-Chorderator/actions/runs/38812386017), including the 30,456-transition AUTO/OFF comparison (AUTO movement 240,816 vs OFF 281,664, 6,264 better individual transitions, zero worse in this corpus).
+- [Independent musical contract: PASS](https://github.com/challanger2000/125A-Chorderator/actions/runs/38812386016) including 756 independent reference diatonic triads, distinct CHARACTER profiles, short 4-note repeated motifs, accurate suspension identity, expressive velocities and invalidation of cached voicings.
+- [Windows VST3 build & Steinberg Validator: PASS 47/47](https://github.com/challanger2000/125A-Chorderator/actions/runs/38812386087). Exact development ZIP artifact: `125A-CHORDERATOR-v1.0.0-Windows-x64-DEVELOPMENT`, artifact ID `12008902980`.
+
+### Acceptance limits (NOT VERIFIED)
+- Native Studio One capture/playback of actual generated MIDI and the current GUI's character controls, octaves, live chord names, input velocity, routes to Pneuma Pro, 100/150% zoom, state recall, stop/seek/retrigger, and varying block sizes.
+- Local 125A Plugin Tester 0.2.10 on this exact VST3.
+- Musical taste, harmonic suitability and expressive feel remain a human listening judgment; CI demonstrates conformity to the defined contract, not universal sonic quality.
+
+**Status: Musical regression / build / official VST3 validator PASS. Release gate: OPEN / NO FINAL.**
