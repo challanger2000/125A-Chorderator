@@ -21,6 +21,8 @@ struct Modifier {
     Variant variant = Variant::Normal;
     bool conflict = false;
 };
+// Octave labels follow the user's Studio One setup: MIDI 24=C-2, 48=C0.
+constexpr int studioOneOctaveFor(int pitch) noexcept { return pitch / 12 - 4; }
 struct ControlLayout {
     int16_t basePitch = 48; // User's Studio One octave convention: MIDI 48 is C0
     static constexpr int width = 5;

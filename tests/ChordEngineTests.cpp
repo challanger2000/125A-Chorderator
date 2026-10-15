@@ -390,5 +390,9 @@ int main() {
     check(named.process(aChord,1) &&
           named.singleChord(chordRoot,chordQuality) &&
           chordQuality==Quality::Power,"POWER identity is explicit");
+    check(studioOneOctaveFor(24)==-2 &&
+          studioOneOctaveFor(48)==0 &&
+          studioOneOctaveFor(60)==1,
+          "DAW octave notation follows verified MIDI 48 = C0");
     std::cout << "ChordEngine tests PASS\n";
 }

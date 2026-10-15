@@ -301,7 +301,7 @@ class ChorderatorController final : public EditControllerEx1,
             if(i)line+="  ";
             const int pitch=quantized(getParamNormalized(kLivePitch1+static_cast<ParamID>(i)),128);
             line+=notes[pitch%12];
-            line+=std::to_string(pitch/12);
+            line+=std::to_string(chorderator::studioOneOctaveFor(pitch));
         }
         if(count>4)line+="  +"+std::to_string(count-4)+" more";
         liveNotes_->setText(line.c_str());

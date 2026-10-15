@@ -23,3 +23,11 @@
 | 125A Plugin Tester / native Studio One | NOT VERIFIED FOR CURRENT HEAD | No corresponding local host evidence in repository | Required release gate |
 
 **Release state: BLOCKED.** Fix highest-risk MIDI output/automation and live-display correctness, add adversarial integration tests, then run validator, 125A tester and actual Studio One GUI/transport/recall tests. Never promote a core-only PASS to FULL QA PASS.
+
+## Confirmed on repair commit 2395cb7 (2026-10-15)
+
+- Windows core tests: PASS, run 38783476316, including output-recovery/timeline/chord-identity regressions.
+- Steinberg VST3 Validator: 47 PASS / 0 FAIL, Windows run 38783476620.
+- Windows development artifact produced by run 38783476620.
+- Subsequent source correction pending: note-name display now follows Studio One MIDI 48 = C0, plus regression cases MIDI 24 = C-2, 60 = C1.
+- **Still NOT YET VERIFIED:** actual Studio One editor clicks/automation/transport and 125A Plugin Tester results for this repair build; neither core PASS nor validator PASS is a FULL-AUDIT or FINAL release pass.
