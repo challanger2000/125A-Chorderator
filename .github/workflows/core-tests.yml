@@ -1,0 +1,21 @@
+name: Chorderator core tests
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop/v1.0.0]
+    paths:
+      - "src/ChordEngine.h"
+      - "tests/ChordEngineTests.cpp"
+      - "CMakeLists.txt"
+      - ".github/workflows/core-tests.yml"
+jobs:
+  core:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
