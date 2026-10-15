@@ -102,6 +102,23 @@ int main() {
         check(dark.accepted && dark.notes[0]==root,
               "DARK/OFF: root stays in original octave");
     }
+    // Every character must preserve incoming root octave for AUTO and OFF.
+    for(auto ch : {Character::Classic,Character::Dark,Character::Wide,Character::Power}) {
+        for(auto lead : {Leading::Off,Leading::Auto}) {
+            VoicingSettings vset; vset.character=ch; vset.leading=lead;
+            Chord prior{};
+            for(int root : std::array<int,5>{{60,62,67,68,60}}) {
+                auto current=voice(generate(root,naturalMinor),root,vset,
+                                   prior.accepted?&prior:nullptr);
+                check(current.accepted && current.notes[0]==root,
+                      "voicing all character/leading combinations preserve root");
+                for(int n=1;n<current.count;++n)
+                    check(current.notes[n]>current.notes[n-1],
+                          "voicing output strictly ascending");
+                prior=current;
+            }
+        }
+    }
     // Control NoteOns on the same sample apply regardless of host event order.
     ControlLayout layout;
     check(layout.valid() && layout.isControl(13) && !layout.isControl(60), "valid controls");
