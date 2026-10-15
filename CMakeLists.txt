@@ -9,3 +9,27 @@ else()
   target_compile_options(chorderator_core_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME chord_engine COMMAND chorderator_core_tests)
+
+option(CHORDERATOR_BUILD_VST3 "Build the Steinberg VST3 plugin" OFF)
+if(CHORDERATOR_BUILD_VST3)
+  set(SMTG_RUN_VST_VALIDATOR OFF CACHE BOOL "" FORCE)
+  set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "" FORCE)
+  set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(SMTG_ENABLE_VSTGUI_SUPPORT OFF CACHE BOOL "" FORCE)
+  include(FetchContent)
+  FetchContent_Declare(vst3sdk
+    GIT_REPOSITORY https://github.com/steinbergmedia/vst3sdk.git
+    GIT_TAG v3.8.1_build_84
+    GIT_SHALLOW TRUE
+  )
+  FetchContent_MakeAvailable(vst3sdk)
+  smtg_add_vst3plugin(Chorderator src/ChordVst3.cpp)
+  target_link_libraries(Chorderator PRIVATE sdk)
+  target_compile_features(Chorderator PRIVATE cxx_std_17)
+  if(WIN32)
+    target_sources(Chorderator PRIVATE
+      ${vst3sdk_SOURCE_DIR}/public.sdk/source/main/dllmain.cpp)
+  endif()
+  smtg_target_configure_version_file(Chorderator)
+endif()
