@@ -23,12 +23,12 @@ struct Modifier {
 };
 struct ControlLayout {
     int16_t basePitch = 0; // absolute MIDI 0; DAW octave names vary
-    static constexpr int width = 3;
+    static constexpr int width = 5;
     constexpr bool valid() const noexcept {
         return basePitch >= 0 && basePitch + width <= 128;
     }
     constexpr bool isControl(int pitch) const noexcept {
-        return valid() && pitch >= basePitch && pitch < basePitch + width;
+        return valid() && (pitch == basePitch || pitch == basePitch+2 || pitch == basePitch+4);
     }
 };
 template <size_t N>
@@ -42,7 +42,7 @@ Modifier modifierAt(const std::array<InputEvent,N>& events, size_t count,
         const auto& event=events[i];
         if (!event.noteOn || event.noteOff || event.offset!=offset ||
             !layout.isControl(event.pitch)) continue;
-        const auto candidate=static_cast<Variant>(event.pitch-layout.basePitch);
+        const auto candidate=static_cast<Variant>((event.pitch-layout.basePitch)/2);
         if (seen && candidate!=result.variant) result.conflict=true;
         result.variant=candidate;
         seen=true;
