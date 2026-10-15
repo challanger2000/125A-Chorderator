@@ -196,6 +196,78 @@ int main() {
        changeKey.output()[1].pitch!=63)
         mismatch("voicing cache did not invalidate after scale change",errors);
     changeKey.process(cOff,1);
+    // Golden true inversions (input keys C-F-G, root note is NOT always bass).
+    // These are independent harmonic references, NOT generated expectations.
+    MidiChordProcessor<> inverted;
+    constexpr std::array<int,4> sequence{{60,65,67,60}};
+    constexpr std::array<std::array<int,3>,4> inversionReference{{
+        {{60,64,67}}, // C major root position
+        {{60,65,69}}, // F/C  = second inversion
+        {{62,67,71}}, // G/D  = second inversion
+        {{60,64,67}}  // identical C on return, not a new raised register
+    }};
+    bool movedUp=false,movedDown=false;
+    int firstInversionCount=0,secondInversionCount=0;
+    for(size_t i=0;i<sequence.size();++i) {
+        const int root=sequence[i],id=200+static_cast<int>(i);
+        const std::array<InputEvent,1> on{{{0,static_cast<int16_t>(root),true,false,id}}};
+        if(!inverted.process(on,1) || inverted.outputCount()!=3)
+            mismatch("golden inversion: three notes expected",errors);
+        else {
+            for(int n=0;n<3;++n) {
+                const int actual=inverted.output()[n].pitch;
+                if(actual!=inversionReference[i][n])
+                    mismatch("golden inverted chord pitch differs from reference",errors);
+                if(i>0) {
+                    const int movement=actual-inversionReference[i-1][n];
+                    if(movement>0)movedUp=true;
+                    if(movement<0)movedDown=true;
+                }
+            }
+            int harmonicRoot=-1;Quality quality=Quality::Major;
+            if(!inverted.singleChord(harmonicRoot,quality) || harmonicRoot!=root)
+                mismatch("chord name/root must survive inversion",errors);
+        }
+        const std::array<InputEvent,1> off{{{0,static_cast<int16_t>(root),false,true,id}}};
+        if(!inverted.process(off,1) || inverted.activeVoices()!=0)
+            mismatch("inverted chord NoteOff ownership incorrect",errors);
+    }
+    if(!movedUp || !movedDown)
+        mismatch("voicing must permit upward AND downward note movements",errors);
+    // Check first/second inversion basses across many scale, character and
+    // key contexts, not just one hand-picked F/C and G/D example.
+    for(auto scale:scales)for(int tonic=0;tonic<12;++tonic) {
+        Settings musical;musical.scale=scale;musical.tonic=static_cast<uint8_t>(tonic);
+        for(auto character:{Character::Classic,Character::Dark,Character::Wide}) {
+            MidiChordProcessor<> engine;
+            engine.setSettings(musical);
+            engine.setVoicing({character,Leading::Auto});
+            const auto degrees=intervals(scale);
+            for(int repeat=0;repeat<3;++repeat)
+            for(int idx:{0,3,4,5,1,4,0,6}) {
+                const int root=48+tonic+degrees[idx];
+                const int id=300+repeat*8+idx;
+                const auto source=generate(root,musical);
+                const std::array<InputEvent,1> on{{{0,static_cast<int16_t>(root),true,false,id}}};
+                if(!engine.process(on,1))
+                    mismatch("inversion corpus note rejected",errors);
+                else if(engine.outputCount()==3 && source.accepted) {
+                    const int bass=engine.output()[0].pitch;
+                    if(mod12(bass)==mod12(source.notes[1]))
+                        ++firstInversionCount;
+                    if(mod12(bass)==mod12(source.notes[2]))
+                        ++secondInversionCount;
+                }
+                const std::array<InputEvent,1> off{{{0,static_cast<int16_t>(root),false,true,id}}};
+                if(!engine.process(off,1))
+                    mismatch("inversion corpus NoteOff failed",errors);
+            }
+        }
+    }
+    std::cout<<"GENUINE INVERSIONS: first="<<firstInversionCount
+             <<" second="<<secondInversionCount<<"\\n";
+    if(firstInversionCount==0 || secondInversionCount==0)
+        mismatch("AUTO must produce both first and second inversions",errors);
     // Phrase reproducibility must not depend on having a full octave
     // descent at the end. C2-Eb2-G2-Bb2 -> C2 falls only ten semitones.
     int loopDiscrepancies=0;

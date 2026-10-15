@@ -88,12 +88,11 @@ int main() {
         const int root=progression[i];
         played[i]=voice(generate(root,naturalMinor),root,autoClassic,
                         previousVoicing.accepted?&previousVoicing:nullptr);
-        check(played[i].accepted && (played[i].notes[0]==root || played[i].notes[1]==root || played[i].notes[2]==root),
-              "Natural Minor root remains in played MIDI octave");
+        check(played[i].accepted && played[i].harmonicRoot==root,
+              "Natural Minor harmonic identity retained through inversion");
         previousVoicing=played[i];
     }
-    check((played[0].notes[0]==60 || played[0].notes[1]==60 || played[0].notes[2]==60) &&
-          (played[4].notes[0]==60 || played[4].notes[1]==60 || played[4].notes[2]==60),
+    check(played[0].harmonicRoot==60 && played[4].harmonicRoot==60,
           "C-D-G-Ab-C return C root does not jump octave");
     // The reported screenshot used DARK + Voice Leading OFF.
     // The played root must stay at exactly its input register.
@@ -113,7 +112,7 @@ int main() {
             for(int root : std::array<int,5>{{60,62,67,68,60}}) {
                 auto current=voice(generate(root,naturalMinor),root,vset,
                                    prior.accepted?&prior:nullptr);
-                check(current.accepted && (current.notes[0]==root || current.notes[1]==root || current.notes[2]==root),
+                check(current.accepted && current.harmonicRoot==root,
                       "voicing all character/leading combinations preserve root");
                 for(int n=1;n<current.count;++n)
                     check(current.notes[n]>current.notes[n-1],
@@ -129,19 +128,31 @@ int main() {
     const Chord fOff=voice(generate(65,majorScale),65,offMode,&cMajor);
     VoicingSettings autoMode; autoMode.leading=Leading::Auto;
     const Chord fAuto=voice(generate(65,majorScale),65,autoMode,&cMajor);
-    check(fAuto.accepted && fOff.accepted && fAuto.notes[0]==65,
-          "AUTO never puts third or fifth below played F root");
+    check(fAuto.accepted && fOff.accepted && fAuto.harmonicRoot==65 &&
+          mod12(fAuto.notes[0])!=mod12(65),
+          "AUTO must allow true inverted F bass");
     check(fAuto.notes[0]<fAuto.notes[1] && fAuto.notes[1]<fAuto.notes[2],
           "AUTO inversion sorted");
     check(fAuto.notes[2]<=84, "AUTO register stays in the supported range");
+    // Golden MIDI: played C -> F -> G must produce genuine inversions.
+    // F/C: bass C, harmonic root F. G/D: bass D, harmonic root G.
+    const Chord cStart=voice(generate(60,majorScale),60,autoMode);
+    const Chord fOverC=voice(generate(65,majorScale),65,autoMode,&cStart);
+    const Chord gOverD=voice(generate(67,majorScale),67,autoMode,&fOverC);
+    pitches(cStart,{60,64,67});
+    pitches(fOverC,{60,65,69});
+    pitches(gOverD,{62,67,71});
+    check(fOverC.harmonicRoot==65 && gOverD.harmonicRoot==67,
+          "inverted bass must not change harmonic chord root");
     // C major to G major below it: AUTO keeps upper voices nearby,
     // whereas OFF uses the default root-position triad.
     const Chord gOff=voice(generate(55,majorScale),55,offMode,&cMajor);
     const Chord gAuto=voice(generate(55,majorScale),55,autoMode,&cMajor);
     check(gAuto.accepted && gOff.accepted && gAuto.notes!=gOff.notes,
           "AUTO must differ from OFF when smooth upper-voice motion exists");
-    check(gAuto.notes[0]==55 && gAuto.notes[1]>55 && gAuto.notes[2]>gAuto.notes[1],
-          "AUTO retains trigger bass and sorted upper voices");
+    check(gAuto.harmonicRoot==55 && gAuto.notes[0]<gAuto.notes[1] &&
+          gAuto.notes[1]<gAuto.notes[2],
+          "AUTO retains G harmony and sorted voices");
     // Repeating the same chord must not walk to a higher octave.
     const Chord gRepeat=voice(generate(55,majorScale),55,autoMode,&gAuto);
     check(gRepeat.notes==gAuto.notes,"AUTO repeated chord remains in stable register");
@@ -175,25 +186,26 @@ int main() {
                                        prior.accepted?&prior:nullptr);
             check(autoChord.accepted && offChord.accepted,
                   "QA: every legal triad must have valid voicing");
-            check(autoChord.count==3 && autoChord.notes[0]==root,
-                  "QA: input bass fixed");
+            check(autoChord.count==3 && autoChord.harmonicRoot==root,
+                  "QA: played key is harmonic identity, not forced bass");
             check(autoChord.notes[0]<autoChord.notes[1] &&
                   autoChord.notes[1]<autoChord.notes[2] &&
                   autoChord.notes[2]<=127 &&
-                  autoChord.notes[2]-root<=23,
+                  autoChord.notes[0]>=root-12 && autoChord.notes[2]<=root+24 &&
+                  autoChord.notes[2]-autoChord.notes[0]<=23,
                   "QA: ordered, bounded MIDI register");
             if(character==Character::Power) {
                 check(autoChord.notes[0]==root && autoChord.notes[1]==root+7 &&
                       autoChord.notes[2]==root+12,
                       "QA: POWER deliberately uses root/fifth/octave");
             } else {
-                for(int n=1;n<3;++n) {
+                for(int n=0;n<3;++n) {
                     bool matches=false;
                     for(int src=0;src<3;++src)
                         if(mod12(static_cast<int>(autoChord.notes[n])-
                                  static_cast<int>(generated.notes[src]))==0)
                             matches=true;
-                    check(matches,"QA: upper voice must retain chord pitch class");
+                    check(matches,"QA: inversion preserves all three original chord pitch classes");
                 }
             }
             const Chord exactRepeat=voice(generated,root,musical,&autoChord);
@@ -206,8 +218,7 @@ int main() {
     }
     check(verifiedChords>10000,"QA: extensive harmonic coverage");
     check(autoDifferent>0,"QA: AUTO must yield some real inversions");
-    // Quantitative AUTO/OFF QA. Compare both upper voices over complete
-    // progressions, excluding bass which is deliberately anchored.
+    // Quantitative AUTO/OFF QA includes all three voices and inverted bass.
     int measuredTransitions=0, improvedTransitions=0, worsenedTransitions=0;
     int64_t autoTravel=0, offTravel=0;
     for(auto scale : allScales) for(int tonic=0;tonic<12;++tonic)
@@ -226,7 +237,7 @@ int main() {
             Chord co=voice(generated,root,o,po.accepted?&po:nullptr);
             if(pa.accepted && po.accepted) {
                 int da=0,doo=0;
-                for(int i=1;i<3;++i) {
+                for(int i=0;i<3;++i) {
                     da+=std::abs(static_cast<int>(ca.notes[i])-static_cast<int>(pa.notes[i]));
                     doo+=std::abs(static_cast<int>(co.notes[i])-static_cast<int>(po.notes[i]));
                 }
@@ -460,15 +471,18 @@ int main() {
                                                  true,false,noteId}}};
             check(repeatedScale.process(on,1), "loop: process NoteOn");
             const size_t expectedCount=octaveDoubled?4u:3u;
-            check(repeatedScale.outputCount()==expectedCount,
-                  "loop: note count unchanged by phrase restarts");
+            check(repeatedScale.outputCount()>=3 && repeatedScale.outputCount()<=expectedCount,
+                  "loop: three notes and unique optional root octave");
             std::array<uint8_t,4> outputPitches{};
-            for(size_t j=0;j<expectedCount;++j)
+            for(size_t j=0;j<repeatedScale.outputCount();++j)
                 outputPitches[j]=repeatedScale.output()[j].pitch;
-            check(outputPitches[0]==root,"loop: bass always equals trigger");
-            if(octaveDoubled)
-                check(outputPitches[3]==root+12,
-                      "ROOT OCTAVE DOUBLE must be exactly root+12");
+            bool rootFactor=false,octaveFactor=false;
+            for(size_t j=0;j<repeatedScale.outputCount();++j) {
+                if(mod12(outputPitches[j])==mod12(root))rootFactor=true;
+                if(outputPitches[j]==root+12)octaveFactor=true;
+            }
+            check(rootFactor,"loop: chord must contain root pitch class");
+            if(octaveDoubled)check(octaveFactor,"double must contain exact root+12");
             if(pass==0) firstPass[i]=outputPitches;
             else check(outputPitches==firstPass[i],
                        "loop: every chord must repeat identical complete voicing");

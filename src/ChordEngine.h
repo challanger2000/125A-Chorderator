@@ -21,6 +21,9 @@ struct Chord {
     uint8_t count = 0;
     Quality quality = Quality::Major;
     bool accepted = false;
+    // Harmonic identity survives real inversions where the bass is not root.
+    // Runtime-only metadata; not part of the VST3 preset/state format.
+    uint8_t harmonicRoot = 255;
 };
 constexpr int mod12(int value) noexcept { return ((value % 12) + 12) % 12; }
 constexpr std::array<int,7> intervals(Scale scale) noexcept {
@@ -77,6 +80,7 @@ constexpr Chord generate(int midiPitch, Settings settings) noexcept {
     }
     // Invalid upper pitches fail atomically; no partial chords.
     if (midiPitch + fifth > 127 || midiPitch + third > 127) return Chord{};
+    out.harmonicRoot = static_cast<uint8_t>(midiPitch);
     out.notes[0] = static_cast<uint8_t>(midiPitch);
     out.notes[1] = static_cast<uint8_t>(midiPitch+third);
     out.notes[2] = static_cast<uint8_t>(midiPitch+fifth);

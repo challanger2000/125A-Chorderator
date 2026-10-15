@@ -20,15 +20,19 @@ For root pitch `r`, original third interval `t` and fifth interval `f`:
 | WIDE | `r, r+t+12, r+f+12`: upper voices one octave higher | 60,76,79 |
 | POWER | `r, r+7, r+12`: fifth and octave, third deliberately omitted | 60,67,72 |
 
-The incoming root is **always the lowest note**, in the exact input octave. If a character profile would exceed MIDI 127, use the closest valid candidate/fallback without emitting invalid notes. These profiles alter note registers, not plugin audio processing or gain.
+With VOICE LEADING **OFF**, the incoming root is the bass as described in the CHARACTER table. With **AUTO**, the incoming MIDI note specifies the *harmonic root and register*, not necessarily the actual bass. AUTO can play **root position**, **first inversion** (third in bass), or **second inversion** (fifth in bass). Musical identity and GUI chord name always follow the input harmonic root, not the lowest emitted MIDI pitch.
 
 ## VOICE LEADING
 
-- OFF plays the exact character profile regardless of history.
-- AUTO chooses a close valid upper-voice arrangement against the **preceding chord**, maintaining the requested character's reference register and fixed played bass. It must never modulate the chord pitch classes.
-- The selected voicing for each **absolute input pitch + NORMAL/SUS2/SUS4 modifier** is saved in bounded processor memory. When that exact note/variant recurs, its previously chosen full voicing is reused, even after a different chord and regardless of how many semitones the returning bass drops.
-- Memory invalidates whenever KEY, SCALE, CHROMATIC ROOTS, CHARACTER, LEADING, ROOT OCTAVE DOUBLE change, or upon explicit transport/reset lifecycle flush. Thus repeated loops in an uninterrupted passage remain stable. Starting in the middle of a song after a reset may choose a different first voicing because the history before the start position is unavailable. Full host seek reproducibility across arbitrary start positions cannot be guaranteed by a history-dependent algorithm; users may select OFF for fully context-independent playback.
-- There are no threshold-based attempts to guess phrase boundaries from a 10-, 11- or 12-semitone bass jump.
+- **OFF** plays the deterministic CHARACTER profile in the preceding table, with root in the bass.
+- **AUTO** enumerates octave placements of all three chord factors, sorts the emitted notes into bass/middle/top, and scores movement of **all three voices** against the preceding chord (including the real bass). It may choose C–F–A for a played F and D–G–B for a played G. It never changes the chord's three pitch classes.
+- Bass may lie as much as one octave below the played root. The entire chord stays in a bounded register near the played pitch. Upper voices can move either **up or down**.
+- Example C-major input triggers **C3 → F3 → G3 → C3** may produce **C3–E3–G3 → C3–F3–A3 (F/C) → D3–G3–B3 (G/D) → C3–E3–G3**. The second and third chords are genuine **second inversions**; the input F/G is the harmonic root, NOT the bass.
+- AUTO stores the first selected three-/four-note voicing for each **absolute trigger pitch + NORMAL/SUS2/SUS4 variant**. Subsequent identical triggers replay that exact chord until musical settings change or the processor resets. This prevents repeated phrases from climbing indefinitely, without inferring phrase starts from arbitrary leap sizes.
+- The fixed-size memory is invalidated by KEY, SCALE, CHROMATIC ROOTS, CHARACTER, LEADING, ROOT OCTAVE DOUBLE changes, and by STOP/reset. A song started mid-phrase can initially choose a different voicing because missing earlier chord history cannot be inferred without an explicit song timeline. OFF remains completely history-independent.
+- POWER intentionally remains its documented root–fifth–octave power chord, not an ordinary three-factor major/minor inversion (it contains no third).
+- The harmonic chord root is stored separately from the emitted lowest note so that **inverted basses cannot mislabel the chord**.
+- The actual note count when ROOT OCTAVE DOUBLE is ON is three or four: root+12 is added exactly once and is omitted if it already appears as one of the three voiced factors.
 
 ## Other MIDI rules
 
