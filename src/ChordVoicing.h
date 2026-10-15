@@ -55,6 +55,19 @@ inline Chord voice(Chord in,int rootMidi,VoicingSettings settings,
         return in;
     }
     const bool hasPrevious=previous && previous->accepted && previous->count>=3;
+    // Identity is a musical invariant: playing the same harmony again
+    // cannot migrate its upper notes merely by updating the voice state.
+    // Check the complete pitch-class set and quality, not just the root.
+    if(hasPrevious && previous->notes[0]==rootMidi &&
+       previous->quality==in.quality) {
+        const int a=mod12(base[1]),b=mod12(base[2]);
+        const int p=mod12(previous->notes[1]),q=mod12(previous->notes[2]);
+        if((a==p && b==q)||(a==q && b==p)) {
+            in.notes[1]=previous->notes[1];
+            in.notes[2]=previous->notes[2];
+            return in;
+        }
+    }
     std::array<int,3> best=base;
     int64_t bestScore=std::numeric_limits<int64_t>::max();
     for(int shiftThird=-1;shiftThird<=1;++shiftThird)
