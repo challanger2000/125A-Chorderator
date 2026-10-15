@@ -35,6 +35,13 @@ int main() {
     pitches(generate(67,s),{67,71,74});
     s.scale=Scale::MelodicMinorAscending;
     pitches(generate(62,s),{62,65,69});
+    // All added church modes build diatonic triads on the expected degrees.
+    s.scale=Scale::Dorian; pitches(generate(60,s),{60,63,67});
+    s.scale=Scale::Phrygian; pitches(generate(60,s),{60,63,67});
+    s.scale=Scale::Lydian; pitches(generate(60,s),{60,64,67});
+    s.scale=Scale::Mixolydian; pitches(generate(60,s),{60,64,67});
+    s.scale=Scale::Locrian; pitches(generate(60,s),{60,63,66});
+    s.scale=Scale::Major;
     VoiceLedger<2> ledger;
     const auto c=generate(60,s);
     check(ledger.start(1,60,c), "regression");
