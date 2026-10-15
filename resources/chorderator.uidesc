@@ -47,10 +47,10 @@
 <view class="CTextButton" control-tag="Chromatic" origin="330, 94" size="160, 30" title="OFF" text-color="Text" text-color-highlighted="Text" gradient="ButtonIdle" gradient-highlighted="ButtonActive" kick-style="false" frame-color="Line" frame-width="1"/>
 </view>
 <view class="CViewContainer" origin="560, 300" size="536, 145" background-color="Panel" transparent="false">
-<view class="CTextLabel" origin="20, 12" size="490, 25" title="OPTIONAL MIDI CONTROL NOTES" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
-<view class="CTextLabel" origin="20, 52" size="275, 22" title="START NOTE (MIDI)" font="Normal" font-color="Muted" transparent="true"/>
-<view class="COptionMenu" control-tag="ControlBase" origin="307, 45" size="200, 32" font-color="Text" back-color="Panel" frame-color="Line" frame-width="1" menu-popup-style="true"/>
-<view class="CTextLabel" origin="20, 103" size="485, 22" title="Play with chord: 12 = NORMAL, 13 = SUS2, 14 = SUS4" font="Small" font-color="Text" transparent="true"/>
+<view class="CTextLabel" origin="20, 12" size="490, 25" title="CHORD MODIFIERS - LOWEST MIDI OCTAVE" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
+<view class="CTextLabel" origin="20, 51" size="490, 22" title="Add a control note at the same start as the chord" font="Normal" font-color="Muted" transparent="true"/>
+
+<view class="CTextLabel" origin="20, 103" size="485, 22" title="MIDI 0 = NORMAL     MIDI 1 = SUS2     MIDI 2 = SUS4" font="Small" font-color="Text" transparent="true"/>
 </view>
 <view class="CViewContainer" origin="24, 464" size="1072, 110" background-color="Panel" transparent="false">
 <view class="CTextLabel" origin="20, 14" size="1032, 27" title="CURRENT CHORD / OUTPUT NOTES" font="Heading" font-color="Accent" transparent="true" text-alignment="center"/>
