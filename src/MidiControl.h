@@ -22,7 +22,7 @@ struct Modifier {
     bool conflict = false;
 };
 struct ControlLayout {
-    int16_t basePitch = 12; // default C0 with DAW-dependent octave label
+    int16_t basePitch = 0; // absolute MIDI 0; DAW octave names vary
     static constexpr int width = 3;
     constexpr bool valid() const noexcept {
         return basePitch >= 0 && basePitch + width <= 128;
