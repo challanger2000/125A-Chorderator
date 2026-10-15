@@ -40,7 +40,7 @@ inline Chord voice(Chord in, int rootMidi, VoicingSettings settings, const Chord
         if (!(c[0]<c[1] && c[1]<c[2])) continue;
         // CLASSIC preserves the played root register. AUTO may move upper
         // voices, but must not octave-jump the incoming MIDI root.
-        if (settings.character==Character::Classic && c[0]!=rootMidi) continue;
+        if (c[0]!=rootMidi) continue;
         // Anchor center to the user's trigger octave.
         if (c[0]<rootMidi-12 || c[2]>rootMidi+24) continue;
         const int spread=c[2]-c[0];
