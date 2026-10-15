@@ -7,6 +7,8 @@ on:
       - "src/ChordEngine.h"
       - "src/ChordVoicing.h"
       - "src/MidiChordProcessor.h"
+      - "src/MidiDelivery.h"
+      - "src/MidiTimeline.h"
       - "src/MidiControl.h"
       - "tests/ChordEngineTests.cpp"
       - "CMakeLists.txt"

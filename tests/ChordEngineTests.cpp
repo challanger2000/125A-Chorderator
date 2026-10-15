@@ -2,6 +2,8 @@
 #include "../src/ChordVoicing.h"
 #include "../src/MidiControl.h"
 #include "../src/MidiChordProcessor.h"
+#include "../src/MidiDelivery.h"
+#include "../src/MidiTimeline.h"
 #include <cstdlib>
 #include <initializer_list>
 #include <iostream>
@@ -324,5 +326,69 @@ int main() {
     check(untagged.process(untaggedOff,1), "untagged final release accepted");
     check(untagged.activeVoices()==0 && untagged.outputCount()==3,
           "last untagged release emits all note offs");
+    // Rejected MIDI output: compensate only for events the host accepted.
+    MidiDelivery outGuard;
+    const std::array<MidiMessage,3> outgoing{{{0,60,true,100},
+                                               {0,64,true,100},
+                                               {0,67,true,100}}};
+    int attempts=0;
+    check(!outGuard.deliver(outgoing.data(),outgoing.size(),
+          [&](const MidiMessage&){return ++attempts==1;}),
+          "partial host event rejection must begin recovery");
+    check(outGuard.recovering() && outGuard.hostOn()[60] &&
+          !outGuard.hostOn()[64],
+          "only host-accepted notes count as playing");
+    check(!outGuard.recover([&](const MidiMessage&){return false;}),
+          "rejected recovery NoteOff must remain pending");
+    int recoveryCount=0;
+    check(outGuard.recover([&](const MidiMessage& m){
+          ++recoveryCount;return !m.on && m.pitch==60;}),
+          "recovery retries and releases exact live pitch");
+    check(recoveryCount==1 && !outGuard.recovering() &&
+          !outGuard.hostOn()[60],"recovery state cleared");
+    check(outGuard.deliver(outgoing.data(),outgoing.size(),
+          [&](const MidiMessage&){return true;}),"processing can resume");
+    outGuard.requireRecovery();
+    check(outGuard.recover([&](const MidiMessage& m){return !m.on;}),
+          "full panic releases all accepted notes");
+
+    // Verify every automation point is ordered relative to MIDI samples.
+    std::array<InputEvent,4> timedNotes{{{24,60,true,false,21},
+        {48,60,false,true,21},{72,60,true,false,22},
+        {96,60,false,true,22}}};
+    std::array<TimedParameter,3> timedParams{{{72,101,1.0},
+        {24,101,0.0},{96,101,0.5}}};
+    int currentScale=-1,groupsSeen=0,applied=0;
+    check(runTimeline(timedNotes,4,timedParams,3,
+          [&](const TimedParameter& p){
+              currentScale=p.value==0.0?0:1;++applied;
+          },
+          [&](const auto& group,size_t n){
+              if(group[0].noteOn)
+                  check(currentScale==(group[0].offset==24?0:1),
+                        "parameter point must precede same-sample note");
+              ++groupsSeen;return n==1;
+          }),"timeline processing successful");
+    check(groupsSeen==4 && applied==3,"all events and parameter points processed");
+
+    // The displayed chord must come from its generated identity, not
+    // a guess based on the four lowest sounding MIDI notes.
+    MidiChordProcessor<> named;
+    std::array<InputEvent,1> aChord{{{0,60,true,false,31}}};
+    int chordRoot=-1;Quality chordQuality=Quality::Major;
+    check(named.process(aChord,1) &&
+          named.singleChord(chordRoot,chordQuality) &&
+          chordRoot==60 && chordQuality==Quality::Major,
+          "one active chord identity is exact");
+    std::array<InputEvent,1> bChord{{{0,64,true,false,32}}};
+    check(named.process(bChord,1) &&
+          !named.singleChord(chordRoot,chordQuality),
+          "simultaneous chords have no falsely asserted single identity");
+    check(named.stop(),"overlap reset");
+    VoicingSettings powerIdentity;powerIdentity.character=Character::Power;
+    named.setVoicing(powerIdentity);
+    check(named.process(aChord,1) &&
+          named.singleChord(chordRoot,chordQuality) &&
+          chordQuality==Quality::Power,"POWER identity is explicit");
     std::cout << "ChordEngine tests PASS\n";
 }

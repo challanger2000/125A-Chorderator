@@ -8,6 +8,8 @@ on:
       - "resources/chorderator.uidesc"
       - "resources/125A_Logo_Master_FINAL.svg"
       - "src/MidiChordProcessor.h"
+      - "src/MidiDelivery.h"
+      - "src/MidiTimeline.h"
       - "src/ChordEngine.h"
       - "src/ChordVoicing.h"
       - "src/MidiControl.h"

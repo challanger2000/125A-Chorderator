@@ -24,6 +24,7 @@ inline Chord voice(Chord in, int rootMidi, VoicingSettings settings, const Chord
         in.notes = {static_cast<uint8_t>(rootMidi), static_cast<uint8_t>(rootMidi+7),
                     static_cast<uint8_t>(rootMidi+12), 0};
         in.count = 3;
+        in.quality = Quality::Power;
         return in;
     }
     // The trigger note is always the bass. OFF is deterministic and does

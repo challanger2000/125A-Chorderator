@@ -1,4 +1,6 @@
 #include "MidiChordProcessor.h"
+#include "MidiDelivery.h"
+#include "MidiTimeline.h"
 #include "public.sdk/source/vst/vstaudioeffect.h"
 #include "public.sdk/source/vst/vsteditcontroller.h"
 #include "public.sdk/source/main/pluginfactory.h"
@@ -25,7 +27,8 @@ static const FUID kProcessorId(0x125A4301, 0x43484F52, 0x44455241, 0x544F5201);
 static const FUID kControllerId(0x125A4302, 0x43484F52, 0x44455241, 0x544F5201);
 enum Params : ParamID { kKey=100, kScale=101, kChromatic=102, kVoiceLeading=103,
     kCharacter=104, kRootDouble=105, kControlBase=106,
-    kLiveCount=200, kLivePitch1=201, kLivePitch2=202, kLivePitch3=203, kLivePitch4=204 };
+    kLiveCount=200, kLivePitch1=201, kLivePitch2=202, kLivePitch3=203, kLivePitch4=204,
+    kLiveChordRoot=205, kLiveChordQuality=206 };
 constexpr uint32_t kMagic=0x31444843u; // CHD1
 constexpr uint32_t kVersion=1;
 struct StoredState {
@@ -75,7 +78,7 @@ class ChorderatorProcessor final : public AudioEffect {
     chorderator::MidiChordProcessor<64,1024> core_;
     StoredState settings_{};
     bool transportWasPlaying_=false;
-    std::array<bool,128> visiblePitches_{};
+    chorderator::MidiDelivery delivery_{};
     static void publish(ProcessData& data,ParamID id,int value,int max) {
         if(!data.outputParameterChanges) return;
         int32 index=0;
@@ -84,13 +87,25 @@ class ChorderatorProcessor final : public AudioEffect {
         q->addPoint(0,static_cast<ParamValue>(value)/max,index);
     }
     void publishNotes(ProcessData& data) {
-        int count=0; std::array<int,4> pitches{};
-        for(int n=0;n<128;++n) if(visiblePitches_[static_cast<size_t>(n)]) {
-            if(count<4) pitches[static_cast<size_t>(count)]=n;
+        int count=0;
+        std::array<int,4> pitches{};
+        const auto& audible=delivery_.hostOn();
+        for(int n=0;n<128;++n) if(audible[static_cast<size_t>(n)]) {
+            if(count<4)pitches[static_cast<size_t>(count)]=n;
             ++count;
         }
-        publish(data,kLiveCount,std::min(count,128),128);
-        for(size_t i=0;i<4;++i) publish(data,kLivePitch1+static_cast<ParamID>(i),pitches[i],127);
+        publish(data,kLiveCount,count,128);
+        for(size_t i=0;i<4;++i)
+            publish(data,kLivePitch1+static_cast<ParamID>(i),pitches[i],127);
+        int root=128;
+        chorderator::Quality quality=chorderator::Quality::Major;
+        if(!delivery_.recovering() && core_.singleChord(root,quality)) {
+            publish(data,kLiveChordRoot,root,128);
+            publish(data,kLiveChordQuality,static_cast<int>(quality),7);
+        } else {
+            publish(data,kLiveChordRoot,128,128);
+            publish(data,kLiveChordQuality,7,7);
+        }
     }
     void apply() {
         chorderator::Settings chord;
@@ -113,40 +128,45 @@ class ChorderatorProcessor final : public AudioEffect {
         case kVoiceLeading: settings_.leading=quantized(v,2);break;
         case kCharacter: settings_.character=quantized(v,4);break;
         case kRootDouble: settings_.doubled=quantized(v,2);break;
-        case kControlBase: settings_.controlBase=quantized(v,126);break;
+        case kControlBase: return; // legacy state compatibility only
         default:return;
         }
         apply();
     }
-    bool emit(IEventList* dest,int32_t offset) {
-        if(!dest) return false;
-        for(size_t i=0;i<core_.outputCount();++i) {
-            const auto& m=core_.output()[i];
-            Event e{};
-            e.busIndex=0;
-            e.sampleOffset=static_cast<int32>(m.offset);
-            if(offset>=0) e.sampleOffset=offset;
-            e.ppqPosition=0;
-            e.type=m.on?Event::kNoteOnEvent:Event::kNoteOffEvent;
-            if(m.on) {
-                e.noteOn.channel=0;
-                e.noteOn.pitch=static_cast<int16>(m.pitch);
-                e.noteOn.velocity=static_cast<float>(m.velocity)/127.f;
-                e.noteOn.length=0;
-                e.noteOn.tuning=0;
-                e.noteOn.noteId=-1;
-            } else {
-                e.noteOff.channel=0;
-                e.noteOff.pitch=static_cast<int16>(m.pitch);
-                e.noteOff.velocity=0;
-                e.noteOff.tuning=0;
-                e.noteOff.noteId=-1;
-            }
-            if(dest->addEvent(e)!=kResultOk) return false;
-            visiblePitches_[m.pitch]=m.on;
+    static bool sendEvent(IEventList* dest,const chorderator::MidiMessage& m,int32 offset) {
+        if(!dest)return false;
+        Event e{};
+        e.busIndex=0;
+        e.sampleOffset=offset>=0?offset:static_cast<int32>(m.offset);
+        e.type=m.on?Event::kNoteOnEvent:Event::kNoteOffEvent;
+        if(m.on) {
+            e.noteOn.channel=0;
+            e.noteOn.pitch=static_cast<int16>(m.pitch);
+            e.noteOn.velocity=static_cast<float>(m.velocity)/127.f;
+            e.noteOn.noteId=-1;
+        } else {
+            e.noteOff.channel=0;
+            e.noteOff.pitch=static_cast<int16>(m.pitch);
+            e.noteOff.noteId=-1;
         }
-        return true;
+        return dest->addEvent(e)==kResultOk;
     }
+    bool emit(IEventList* dest,int32 offset=-1) {
+        return delivery_.deliver(core_.output(),core_.outputCount(),
+            [&](const chorderator::MidiMessage& m) noexcept {
+                return sendEvent(dest,m,offset);
+            });
+    }
+    void requestRecovery() noexcept {
+        core_.stop();
+        delivery_.requireRecovery();
+    }
+    bool drainRecovery(IEventList* dest) {
+        return delivery_.recover([&](const chorderator::MidiMessage& m) noexcept {
+            return sendEvent(dest,m,0);
+        });
+    }
+
 public:
     ChorderatorProcessor() { setControllerClass(kControllerId);apply(); }
     static FUnknown* create(void*) { return static_cast<IAudioProcessor*>(new ChorderatorProcessor()); }
@@ -166,7 +186,7 @@ public:
         return kResultOk;
     }
     tresult PLUGIN_API setActive(TBool active) SMTG_OVERRIDE {
-        if(!active) { core_.stop(); visiblePitches_.fill(false); transportWasPlaying_=false; }
+        if(!active) { core_.stop(); delivery_.clearForDeactivation(); transportWasPlaying_=false; }
         return AudioEffect::setActive(active);
     }
     tresult PLUGIN_API getState(IBStream* stream) SMTG_OVERRIDE {
@@ -176,62 +196,82 @@ public:
         StoredState loaded{};
         if(!readState(stream,loaded)) return kResultFalse;
         core_.stop();
-        visiblePitches_.fill(false);
+        delivery_.requireRecovery();
         settings_=loaded;apply();
         return kResultOk;
     }
     tresult PLUGIN_API process(ProcessData& data) SMTG_OVERRIDE {
+        // Refuse new notes until NoteOff recovery for every host-accepted
+        // note has finished. A permanently rejecting host cannot be forced.
+        if(delivery_.recovering() && !drainRecovery(data.outputEvents)) {
+            publishNotes(data);
+            return kResultOk;
+        }
+        if(!data.outputEvents) {
+            requestRecovery();
+            publishNotes(data);
+            return kResultOk;
+        }
+        const bool known=data.processContext!=nullptr;
+        const bool playing=known &&
+            ((data.processContext->state & ProcessContext::kPlaying)!=0);
+        if(known && transportWasPlaying_ && !playing) {
+            if(!core_.stop() || !emit(data.outputEvents,0)) {
+                requestRecovery();
+                publishNotes(data);
+                return kResultOk;
+            }
+        }
+        if(known)transportWasPlaying_=playing;
+
+        constexpr size_t kEvents=256,kParams=256;
+        std::array<chorderator::InputEvent,kEvents> notes{};
+        std::array<chorderator::TimedParameter,kParams> params{};
+        size_t count=0,pcount=0;
         if(data.inputParameterChanges) {
             for(int32 i=0;i<data.inputParameterChanges->getParameterCount();++i) {
                 auto* q=data.inputParameterChanges->getParameterData(i);
-                if(!q) continue;
-                int32 offset=0; ParamValue value=0;
-                const int32 n=q->getPointCount();
-                if(n>0 && q->getPoint(n-1,offset,value)==kResultOk) update(q->getParameterId(),value);
+                if(!q)continue;
+                const ParamID id=q->getParameterId();
+                if(id<kKey || id>kRootDouble)continue;
+                for(int32 j=0;j<q->getPointCount();++j) {
+                    int32 at=0;ParamValue value=0.;
+                    if(q->getPoint(j,at,value)!=kResultOk ||
+                       at<0 || at>=data.numSamples)continue;
+                    if(pcount==kParams) {
+                        requestRecovery();publishNotes(data);return kResultOk;
+                    }
+                    params[pcount++]={static_cast<uint32_t>(at),id,value};
+                }
             }
         }
-        if(!data.outputEvents) return kResultOk;
-        // Transport discontinuity: release tracked notes before handling this block.
-        // Not all hosts send process() after stop, so setActive(false) remains a
-        // separate lifecycle reset; native host testing is mandatory.
-        const bool transportKnown = data.processContext != nullptr;
-        const bool playing = transportKnown &&
-            ((data.processContext->state & ProcessContext::kPlaying) != 0);
-        if(transportKnown && transportWasPlaying_ && !playing) {
-            if(!core_.stop() || !emit(data.outputEvents,0)) return kResultFalse;
-        }
-        if(transportKnown) transportWasPlaying_=playing;
-        constexpr size_t kCapacity=256;
-        std::array<chorderator::InputEvent,kCapacity> incoming{};
-        size_t count=0;
         if(data.inputEvents) {
             const int32 total=data.inputEvents->getEventCount();
-            if(total>static_cast<int32>(kCapacity)) return kResultFalse;
             for(int32 i=0;i<total;++i) {
-                Event event{};
-                if(data.inputEvents->getEvent(i,event)!=kResultOk) continue;
-                const bool on=event.type==Event::kNoteOnEvent;
-                const bool off=event.type==Event::kNoteOffEvent;
-                if(!on && !off) continue;
-                const auto& n=on?event.noteOn.pitch:event.noteOff.pitch;
-                const auto id=on?event.noteOn.noteId:event.noteOff.noteId;
-                if(n<0 || n>127 || event.sampleOffset<0) continue;
-                incoming[count++]={static_cast<uint32_t>(event.sampleOffset),
-                                    static_cast<int16_t>(n),on,off,id};
+                Event e{};
+                if(data.inputEvents->getEvent(i,e)!=kResultOk)continue;
+                const bool on=e.type==Event::kNoteOnEvent;
+                const bool off=e.type==Event::kNoteOffEvent;
+                if(!on && !off)continue;
+                const auto pitch=on?e.noteOn.pitch:e.noteOff.pitch;
+                const auto id=on?e.noteOn.noteId:e.noteOff.noteId;
+                if(pitch<0 || pitch>127 ||
+                   e.sampleOffset<0 || e.sampleOffset>=data.numSamples)continue;
+                if(count==kEvents) {
+                    requestRecovery();publishNotes(data);return kResultOk;
+                }
+                notes[count++]={static_cast<uint32_t>(e.sampleOffset),
+                                static_cast<int16_t>(pitch),on,off,id};
             }
         }
-        // Host event ordering is not assumed beyond sample offsets.
-        // Stable insertion sort (bounded 256 events; no allocation).
-        for(size_t i=1;i<count;++i) {
-            const auto item=incoming[i];
-            size_t j=i;
-            while(j>0 && incoming[j-1].offset>item.offset) {
-                incoming[j]=incoming[j-1]; --j;
-            }
-            incoming[j]=item;
-        }
-        if(!core_.process(incoming,count)) return kResultFalse;
-        if(!emit(data.outputEvents,-1)) return kResultFalse;
+        const bool ok=chorderator::runTimeline(notes,count,params,pcount,
+            [&](const chorderator::TimedParameter& p) noexcept {
+                update(static_cast<ParamID>(p.id),p.value);
+            },
+            [&](const auto& group,size_t n) noexcept {
+                return core_.process(group,n) && emit(data.outputEvents);
+            });
+        if(!ok)requestRecovery();
         publishNotes(data);
         return kResultOk;
     }
@@ -242,68 +282,29 @@ class ChorderatorController final : public EditControllerEx1,
     VSTGUI::CTextLabel* allowedNotes_=nullptr;
     VSTGUI::CTextLabel* liveNotes_=nullptr;
     void refreshLiveNotes() {
-        if(!liveNotes_) return;
-        static constexpr const char* names[]={"C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"};
+        if(!liveNotes_)return;
+        static constexpr const char* notes[]={"C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"};
+        static constexpr const char* qualities[]={"","m","dim","aug","sus2","sus4","5"};
         const int count=quantized(getParamNormalized(kLiveCount),129);
         if(count==0) {
             liveNotes_->setText("No active chord");
             liveNotes_->invalid();
             return;
         }
-        std::array<int,4> pitches{};
-        const int shown=std::min(count,4);
-        std::string detail="Notes: ";
-        for(int i=0;i<shown;++i) {
-            const int n=quantized(getParamNormalized(kLivePitch1+static_cast<ParamID>(i)),128);
-            pitches[static_cast<size_t>(i)]=n;
-            if(i) detail+="  ";
-            detail+=names[n%12];
-            detail+=std::to_string(n/12);
+        const int root=quantized(getParamNormalized(kLiveChordRoot),129);
+        const int quality=quantized(getParamNormalized(kLiveChordQuality),8);
+        std::string line=root<128 && quality<7 ?
+            std::string("CHORD: ")+notes[root%12]+qualities[quality] :
+            "CHORD: -- (overlap / recovery)";
+        line+="    |    Notes: ";
+        for(int i=0;i<std::min(count,4);++i) {
+            if(i)line+="  ";
+            const int pitch=quantized(getParamNormalized(kLivePitch1+static_cast<ParamID>(i)),128);
+            line+=notes[pitch%12];
+            line+=std::to_string(pitch/12);
         }
-        if(count>4) detail+="  +"+std::to_string(count-4)+" more";
-        // The generator keeps the incoming trigger root as its lowest note.
-        // Only identify the chord when the COMPLETE audible pitch set fits
-        // a supported triad/suspension/power chord; never guess on overlaps.
-        std::string chordName;
-        if(count>=2 && count<=4) {
-            const int root=pitches[0];
-            bool hasThirdMinor=false,hasThirdMajor=false,hasSus2=false,hasSus4=false;
-            bool hasFifth=false,hasDimFifth=false,hasAugFifth=false;
-            bool unknown=false;
-            for(int i=1;i<count;++i) {
-                const int interval=(pitches[static_cast<size_t>(i)]-root)%12;
-                switch(interval) {
-                    case 0: break; // octave doubling
-                    case 2: hasSus2=true;break;
-                    case 3: hasThirdMinor=true;break;
-                    case 4: hasThirdMajor=true;break;
-                    case 5: hasSus4=true;break;
-                    case 6: hasDimFifth=true;break;
-                    case 7: hasFifth=true;break;
-                    case 8: hasAugFifth=true;break;
-                    default:unknown=true;break;
-                }
-            }
-            const int thirdCount=static_cast<int>(hasThirdMinor)+static_cast<int>(hasThirdMajor)+
-                                 static_cast<int>(hasSus2)+static_cast<int>(hasSus4);
-            const int fifthCount=static_cast<int>(hasFifth)+static_cast<int>(hasDimFifth)+
-                                 static_cast<int>(hasAugFifth);
-            if(!unknown && fifthCount==1) {
-                std::string suffix;
-                if(thirdCount==0 && hasFifth) suffix="5";
-                else if(thirdCount==1 && hasFifth && hasThirdMajor) suffix="";
-                else if(thirdCount==1 && hasFifth && hasThirdMinor) suffix="m";
-                else if(thirdCount==1 && hasDimFifth && hasThirdMinor) suffix="dim";
-                else if(thirdCount==1 && hasAugFifth && hasThirdMajor) suffix="aug";
-                else if(thirdCount==1 && hasFifth && hasSus2) suffix="sus2";
-                else if(thirdCount==1 && hasFifth && hasSus4) suffix="sus4";
-                else suffix="?";
-                if(suffix!="?") chordName=std::string(names[root%12])+suffix;
-            }
-        }
-        std::string label=chordName.empty()?"CHORD: --    |    "+detail:
-                                              "CHORD: "+chordName+"    |    "+detail;
-        liveNotes_->setText(label.c_str());
+        if(count>4)line+="  +"+std::to_string(count-4)+" more";
+        liveNotes_->setText(line.c_str());
         liveNotes_->invalid();
     }
     VSTGUI::CTextButton* chromaticButton_=nullptr;
@@ -375,7 +376,7 @@ public:
         const auto result=EditControllerEx1::setParamNormalized(id,value);
         if(id==kKey || id==kScale) refreshScaleNotes();
         if(id==kChromatic || id==kRootDouble) refreshToggles();
-        if(id>=kLiveCount && id<=kLivePitch4) refreshLiveNotes();
+        if(id>=kLiveCount && id<=kLiveChordQuality) refreshLiveNotes();
         return result;
     }
 
@@ -425,10 +426,11 @@ public:
         controlBase->getInfo().defaultNormalizedValue=48.0/125.0;
         controlBase->setNormalized(48.0/125.0);
         parameters.addParameter(controlBase);
-        for(ParamID id=kLiveCount;id<=kLivePitch4;++id) {
+        for(ParamID id=kLiveCount;id<=kLiveChordQuality;++id) {
+            const int max=id==kLiveCount || id==kLiveChordRoot?128:
+                          id==kLiveChordQuality?7:127;
             auto* p=new RangeParameter(STR16("Live MIDI"),id,nullptr,0.,
-                                       id==kLiveCount?128.:127.,0.,
-                                       id==kLiveCount?128:127);
+                                       static_cast<double>(max),0.,max);
             p->getInfo().flags=ParameterInfo::kIsReadOnly | ParameterInfo::kIsHidden;
             parameters.addParameter(p);
         }

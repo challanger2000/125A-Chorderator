@@ -42,6 +42,17 @@ public:
     }
     const MidiMessage* output() const noexcept { return output_.data(); }
     size_t outputCount() const noexcept { return outputCount_; }
+    bool singleChord(int& root, Quality& quality) const noexcept {
+        const Held* only=nullptr;
+        for(const auto& h:held_) if(h.active) {
+            if(only) return false;
+            only=&h;
+        }
+        if(!only) return false;
+        root=only->trigger;
+        quality=only->chord.quality;
+        return true;
+    }
     size_t activeVoices() const noexcept {
         size_t n=0; for(const auto& h:held_) if(h.active) ++n; return n;
     }

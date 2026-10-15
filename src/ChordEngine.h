@@ -6,7 +6,7 @@ namespace chorderator {
 
 // Pure, allocation-free music engine. No VST3 SDK dependency.
 enum class Scale : uint8_t { Major, NaturalMinor, HarmonicMinor, MelodicMinorAscending, Dorian, Phrygian, Lydian, Mixolydian, Locrian };
-enum class Quality : uint8_t { Major, Minor, Diminished, Augmented, Sus2, Sus4 };
+enum class Quality : uint8_t { Major, Minor, Diminished, Augmented, Sus2, Sus4, Power };
 enum class Variant : uint8_t { Normal, Sus2, Sus4 };
 struct Settings {
     uint8_t tonic = 0; // pitch class 0=C ... 11=B
