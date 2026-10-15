@@ -85,7 +85,7 @@ public:
                 bool duplicate=false;
                 Held* freeSlot=nullptr;
                 for(auto& h:held_) {
-                    if(h.active && h.id==e.noteId && h.trigger==e.pitch) duplicate=true;
+                    if(e.noteId>=0 && h.active && h.id==e.noteId && h.trigger==e.pitch) duplicate=true;
                     if(!h.active && !freeSlot) freeSlot=&h;
                 }
                 if(duplicate || !freeSlot) continue;
