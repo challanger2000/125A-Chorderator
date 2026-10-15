@@ -160,6 +160,11 @@ public:
     tresult PLUGIN_API canProcessSampleSize(int32 format) SMTG_OVERRIDE {
         return format==kSample32 || format==kSample64?kResultTrue:kResultFalse;
     }
+    // AudioEffect's default setProcessing returns kNotImplemented.
+    // A MIDI-only processor still must accept host processing transitions.
+    tresult PLUGIN_API setProcessing(TBool state) SMTG_OVERRIDE {
+        return kResultOk;
+    }
     tresult PLUGIN_API setActive(TBool active) SMTG_OVERRIDE {
         if(!active) { core_.stop(); visiblePitches_.fill(false); transportWasPlaying_=false; }
         return AudioEffect::setActive(active);
