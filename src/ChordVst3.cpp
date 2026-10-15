@@ -333,8 +333,16 @@ public:
         auto* doubled=new StringListParameter(STR16("Root Double"),kRootDouble);
         doubled->appendString(STR16("OFF"));doubled->appendString(STR16("ON"));
         parameters.addParameter(doubled);
-        parameters.addParameter(STR16("Control Base"),nullptr,125,12.0/125.0,
-                                ParameterInfo::kCanAutomate,kControlBase);
+        auto* controlBase=new StringListParameter(STR16("Modifier MIDI Base"),kControlBase);
+        for(int n=0;n<=125;++n) {
+            const auto label=std::to_string(n);
+            Steinberg::String128 text{};
+            Steinberg::UString(text,128).fromAscii(label.c_str());
+            controlBase->appendString(text);
+        }
+        controlBase->getInfo().defaultNormalizedValue=12.0/125.0;
+        controlBase->setNormalized(12.0/125.0);
+        parameters.addParameter(controlBase);
         for(ParamID id=kLiveCount;id<=kLivePitch4;++id) {
             auto* p=new RangeParameter(STR16("Live MIDI"),id,nullptr,0.,
                                        id==kLiveCount?128.:127.,0.,
